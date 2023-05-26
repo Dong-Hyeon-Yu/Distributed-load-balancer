@@ -7,10 +7,8 @@ So this codebase also includes a PoC implementation for Dumbo-2 as a by-product.
     ```
     sudo apt-get update
     sudo apt-get -y install make bison flex libgmp-dev libmpc-dev python3 python3-dev python3-pip libssl-dev
-    
-    wget https://crypto.stanford.edu/pbc/files/pbc-0.5.14.tar.gz
-    tar -xvf pbc-0.5.14.tar.gz
-    cd pbc-0.5.14
+
+    cd 3rdparty/pbc-0.5.14
     sudo ./configure
     sudo make
     sudo make install
@@ -26,14 +24,13 @@ So this codebase also includes a PoC implementation for Dumbo-2 as a by-product.
     source /home/ubuntu/.profile
     export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/lib
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
-     
-    git clone https://github.com/JHUISI/charm.git
+
     cd charm
     sudo ./configure.sh
     sudo make
     sudo make install
     sudo make test
-    cd ..
+    cd ../../
     
     python3 -m pip install --upgrade pip
     sudo pip3 install gevent setuptools gevent numpy ecdsa pysocks gmpy2 zfec gipc pycrypto coincurve
@@ -41,10 +38,10 @@ So this codebase also includes a PoC implementation for Dumbo-2 as a by-product.
 
 2. A quick start to run Dumbo-2 for 20 epochs with a batch size of 1000 tx can be:
    ```
-   ./run_local_network_test.sh 4 1 1000 20
+   ./run_local_network_test.sh 4 1 1000 20 dumbo
    ```
    
-   To run BDT variants instead of Dumbo-2, edit line-12 in run_local_network_test.sh to replace "dumbo" by "bdt" or "rbc-bdt" before executing the shell script.
+   To run BDT variants instead of Dumbo-2, replace "dumbo" by "bdt" or "rbc-bdt".
 
 3. If you would like to test the code among AWS cloud servers (with Ubuntu 18.84 LTS). You can follow the commands inside run_local_network_test.sh to remotely start the protocols at all servers. An example to conduct the WAN tests from your PC side terminal can be:
    ```
