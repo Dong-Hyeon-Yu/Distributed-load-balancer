@@ -3,3 +3,5 @@ log/
 **/keys/
 **/keys-*/
 venv/
+**/*.pyc
+**/__pycache__/

@@ -1,6 +1,13 @@
-from gevent import monkey; monkey.patch_all(thread=False)
-
 import json
+from types import SimpleNamespace
+
+from gevent import monkey;
+
+from mempool.data.transaction import Transaction
+
+monkey.patch_all(thread=False)
+
+import jsons
 import logging
 import os
 import traceback, time
@@ -129,6 +136,24 @@ class Dumbo():
         # Insert transactions to the end of TX buffer
         self.transaction_buffer.put_nowait(tx)
 
+    def fetch_tx_batch(self):
+        tx_to_send = []
+        for _ in range(self.B):
+            tx_to_send.append(self.transaction_buffer.get_nowait())
+        return tx_to_send
+
+    def decode_block(self, raw_block):
+        block = set()
+        for batch in raw_block:
+            decoded_batch = json.loads(batch.decode())
+            for tx in decoded_batch:
+                block.add(tx)
+
+        return list(block)
+
+    def remove_committed_tx_from_storage(self, block):
+        pass
+
     def run_bft(self):
         """Run the Dumbo protocol."""
 
@@ -179,9 +204,7 @@ class Dumbo():
                 self._per_round_recv[r] = Queue()
 
             # Select B transactions (TODO: actual random selection)
-            tx_to_send = []
-            for _ in range(self.B):
-                tx_to_send.append(self.transaction_buffer.get_nowait())
+            tx_to_send = self.fetch_tx_batch()
 
             def _make_send(r):
                 def _send(j, o):
@@ -193,7 +216,7 @@ class Dumbo():
             new_tx = self._run_round(r, tx_to_send, send_r, recv_r)
 
             if self.logger != None:
-                tx_cnt = str(new_tx).count("Dummy TX")
+                tx_cnt = len(new_tx)
                 self.txcnt += tx_cnt
                 self.logger.info('Node %d Delivers ACS Block in Round %d with having %d TXs' % (self.id, r, tx_cnt))
                 end = time.time()
@@ -362,20 +385,16 @@ class Dumbo():
                            vacs_output.get)
 
         dumboacs_thread.start()
-
         _output = honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
-                          propose=json.dumps(tx_to_send),
+                          propose=jsons.dumps(tx_to_send),
                           acs_put_in=my_prbc_input.put_nowait, acs_get_out=dumboacs_thread.get,
                           tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
 
-        block = set()
-        for batch in _output:
-            decoded_batch = json.loads(batch.decode())
-            for tx in decoded_batch:
-                block.add(tx)
-
         bc_recv_loop_thread.kill()
 
-        return list(block)
+        block = self.decode_block(_output)
+        self.remove_committed_tx_from_storage(block)
+
+        return block
 
     # TODO： make help and callhelp threads to handle the rare cases when vacs (vaba) returns None

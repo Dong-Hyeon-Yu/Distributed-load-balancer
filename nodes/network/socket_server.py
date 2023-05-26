@@ -1,5 +1,6 @@
-from gevent import monkey; monkey.patch_all(thread=False)
+from gevent import monkey;monkey.patch_all(thread=False)
 
+from nodes.utils.logger import server_log
 from gevent.server import StreamServer
 import pickle
 from typing import Callable
@@ -22,6 +23,7 @@ class NetworkServer (Process):
         self.ip = my_ip
         self.port = port
         self.id = id
+        self.logger = self._set_server_logger(self.id)
         self.addresses_list = addresses_list
         self.N = len(self.addresses_list)
         self.is_in_sock_connected = [False] * self.N
@@ -61,10 +63,8 @@ class NetworkServer (Process):
         self.streamServer.serve_forever()
 
 
+    @server_log
     def run(self):
-        pid = os.getpid()
-        self.logger = self._set_server_logger(self.id)
-        self.logger.info('node id %d is running on pid %d' % (self.id, pid))
         with self.ready.get_lock():
             self.ready.value = True
         self._listen_and_recv_forever()

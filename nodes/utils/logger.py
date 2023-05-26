@@ -18,10 +18,21 @@ def get_consensus_logger(id: int):
 
 
 def bootstrap_log(fun):
-    def wrapper(*args, **kwargs):
+    def prepare_bootstrap(*args, **kwargs):
         self = args[0]
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
         fun(*args, **kwargs)
         self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
+    return prepare_bootstrap
 
-    return wrapper
+
+def server_log(fun):
+    def run(*args, **kwargs):
+        self = args[0]
+        pid = os.getpid()
+        self.logger.info('node id %d is running on pid %d' % (self.id, pid))
+        fun(*args, **kwargs)
+        self.logger.info(
+            'node %d\'s socket server finished listening on process id %d' % (self.id, pid))
+
+    return run
