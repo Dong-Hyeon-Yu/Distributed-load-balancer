@@ -3,8 +3,8 @@ import gevent
 import os
 from gevent import time
 from BFTs.honeybadgerbft.core.honeybadger import HoneyBadgerBFT
-from nodes.implements.utils.make_random_tx import tx_generator
-from nodes.implements.utils.key_loader import load_key_
+from nodes.utils.make_random_tx import tx_generator
+from nodes.utils.key_loader import load_key_
 
 
 class HoneyBadgerBFTNode (HoneyBadgerBFT):

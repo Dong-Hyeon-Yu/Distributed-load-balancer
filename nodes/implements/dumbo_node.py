@@ -5,8 +5,8 @@ from typing import Callable
 import os
 from gevent import time
 from BFTs.dumbobft.core.dumbo import Dumbo
-from nodes.implements.utils.make_random_tx import tx_generator
-from nodes.implements.utils.key_loader import load_key
+from nodes.utils.make_random_tx import tx_generator
+from nodes.utils.key_loader import load_key
 from multiprocessing import Value as mpValue
 from ctypes import c_bool
 
