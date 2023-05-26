@@ -102,7 +102,7 @@ class HoneyBadgerBFT():
         #if self.logger != None: self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
         self.transaction_buffer.append(tx)
 
-    def run(self):
+    def run_bft(self):
         """Run the HoneyBadgerBFT protocol."""
 
         if self.mute:

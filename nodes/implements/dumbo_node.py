@@ -1,3 +1,4 @@
+from nodes.utils.logger import bootstrap_log
 from gevent import monkey;monkey.patch_all(thread=False)
 
 import random
@@ -7,11 +8,12 @@ from gevent import time
 from BFTs.dumbobft.core.dumbo import Dumbo
 from nodes.utils.make_random_tx import tx_generator
 from nodes.utils.key_loader import load_key
+from nodes.Runnable import Runnable
 from multiprocessing import Value as mpValue
 from ctypes import c_bool
 
 
-class DumboBFTNode (Dumbo):
+class DumboBFTNode (Dumbo, Runnable):
 
     def __init__(self, sid, id, B, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, debug=False, bft_running: mpValue=mpValue(c_bool, False), tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
@@ -25,8 +27,8 @@ class DumboBFTNode (Dumbo):
         self.running = bft_running
         Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute, debug=debug)
 
+    @bootstrap_log
     def prepare_bootstrap(self):
-        self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
         if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
             tx = tx_generator(250)  # Set each dummy TX to be 250 Byte
             k = 0
@@ -39,10 +41,8 @@ class DumboBFTNode (Dumbo):
         else:
             pass
             # TODO: submit transactions through tx_buffer
-        self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
 
     def run(self):
-
         pid = os.getpid()
         self.logger.info('node %d\'s starts to run consensus on process id %d' % (self.id, pid))
 
@@ -55,33 +55,3 @@ class DumboBFTNode (Dumbo):
 
         self.run_bft()
         self.stop.value = True
-
-def main(sid, i, B, N, f, addresses, K):
-    badger = DumboBFTNode(sid, i, B, N, f, addresses, K)
-    badger.run_bft()
-
-
-if __name__ == '__main__':
-
-    from nodes.utils import arg_parser
-
-    args = arg_parser.parse()
-
-    # Some parameters
-    sid = args.sid
-    i = args.id
-    N = args.N
-    f = args.f
-    B = args.B
-    K = args.K
-
-    # Random generator
-    rnd = random.Random(sid)
-
-    # Nodes list
-    host = "127.0.0.1"
-    port_base = int(rnd.random() * 5 + 1) * 10000
-    addresses = [(host, port_base + 200 * i) for i in range(N)]
-    print(addresses)
-
-    main(sid, i, B, N, f, addresses, K)
