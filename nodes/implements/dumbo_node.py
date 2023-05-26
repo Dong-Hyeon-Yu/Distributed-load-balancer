@@ -63,21 +63,9 @@ def main(sid, i, B, N, f, addresses, K):
 
 if __name__ == '__main__':
 
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--sid', metavar='sid', required=True,
-                        help='identifier of node', type=str)
-    parser.add_argument('--id', metavar='id', required=True,
-                        help='identifier of node', type=int)
-    parser.add_argument('--N', metavar='N', required=True,
-                        help='number of parties', type=int)
-    parser.add_argument('--f', metavar='f', required=True,
-                        help='number of faulties', type=int)
-    parser.add_argument('--B', metavar='B', required=True,
-                        help='size of batch', type=int)
-    parser.add_argument('--K', metavar='K', required=True,
-                        help='rounds to execute', type=int)
-    args = parser.parse_args()
+    from nodes.utils import arg_parser
+
+    args = arg_parser.parse()
 
     # Some parameters
     sid = args.sid
