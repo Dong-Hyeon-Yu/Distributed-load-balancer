@@ -1,10 +1,7 @@
-from gevent import monkey;
+from gevent import monkey; monkey.patch_all(thread=False)
 
-monkey.patch_all(thread=False)
-
-import time
 import pickle
-from typing import List, Callable
+from typing import Callable
 import gevent
 import os
 from multiprocessing import Value as mpValue, Process
@@ -75,14 +72,17 @@ class NetworkClients(Process):
 
     def _connect(self, j: int, ip, port, addresses_list, socks):
         sock = socket.socket()
-        if ip == '127.0.0.1':
-            # print(self.ip"bind", self.port + j + 1)
-            sock.bind((ip, port + j + 1))
         try:
+            if ip == '127.0.0.1':
+                sock.bind((ip, port + j + 1))
+
             sock.connect(addresses_list[j])
             socks[j] = sock
             return True
-        except Exception as e1:
+        except OSError as e:
+            if e.errno == 98:  # Address already in use
+                return False
+        except Exception:
             return False
 
     def _send(self, j: int, s, stop, sock_queues, socks):

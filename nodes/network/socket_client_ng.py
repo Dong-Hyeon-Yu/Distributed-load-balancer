@@ -65,15 +65,18 @@ class NetworkClient(Process):
         self.logger.info(
             'node %d\'s socket client starts to make outgoing connections to node %d server' % (self.id, j))
         sock = socket.socket()
-        if self.ip == '127.0.0.1':
-            # print(self.ip"bind", self.port + j + 1)
-            sock.bind((self.ip, self.port + j + 1))
         try:
+            if self.ip == '127.0.0.1':
+                sock.bind((self.ip, self.port + j + 1))
+
             sock.connect(self.addresses_list[j])
             self.socks[j] = sock
             self.logger.info('node %d\'s socket client made an outgoing connection to node %d server' % (self.id, j))
             return True
-        except Exception as e1:
+        except OSError as e:
+            if e.errno == 98:  # Address already in use
+                return False
+        except Exception:
             self.logger.info('node %d\'s socket client fails to make connection to node %d server' % (self.id, j))
             return False
 
