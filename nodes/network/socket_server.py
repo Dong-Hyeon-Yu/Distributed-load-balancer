@@ -15,10 +15,11 @@ class NetworkServer (Process):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'.encode('utf-8')
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, server_to_bft: Callable, server_ready: mpValue, stop: mpValue):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, server_to_bft: Callable,
+                 server_ready: mpValue, stop: mpValue):
 
         self.server_to_bft = server_to_bft
-        self.ready = server_ready
+        self.server_ready = server_ready
         self.stop = stop
         self.ip = my_ip
         self.port = port
@@ -49,7 +50,7 @@ class NetworkServer (Process):
                             (j, o) = (jid, pickle.loads(data))
                             # assert j in range(self.N)
                             self.server_to_bft((j, o))
-                            # self.logger.info('recv' + str((j, o)))
+                            # self.logger.debug('recv' + str((j, o)))
                             # print('recv' + str((j, o)))
                         else:
                             self.logger.error('syntax error messages')
@@ -65,8 +66,8 @@ class NetworkServer (Process):
 
     @server_log
     def run(self):
-        with self.ready.get_lock():
-            self.ready.value = True
+        with self.server_ready.get_lock():
+            self.server_ready.value = True
         self._listen_and_recv_forever()
 
     def _address_to_id(self, address: tuple):

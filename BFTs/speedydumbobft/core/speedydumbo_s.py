@@ -146,9 +146,7 @@ class SpeedyDumbo():
                 self._per_round_recv[r] = Queue()
 
             # Select B transactions (TODO: actual random selection)
-            tx_to_send = []
-            for _ in range(self.B):
-                tx_to_send.append(self.transaction_buffer.fetch_tx())
+            tx_to_send = self.transaction_buffer.fetch_tx_batch(self.B)
 
             def _make_send(r):
                 def _send(j, o):

@@ -72,9 +72,9 @@ class BM:
         self.sSK1 = sSK1
         self.sPK2s = sPK2s
         self.sSK2 = sSK2
-        self._send1 = send1
-        self._send2 = send2
-        self._recv = recv
+        self.send1 = send1
+        self.send2 = send2
+        self.recv = recv
         self.logger = logger.get_consensus_logger(pid)
         self.K = K
         self.round = 0  # Current block number
@@ -117,7 +117,7 @@ class BM:
                 # gevent.sleep(0)
                 try:
                     gevent.sleep(0)
-                    (sender, (r0, msg)) = self._recv()
+                    (sender, (r0, msg)) = self.recv()
                     if r0 not in self._per_round_recv:
                         self._per_round_recv[r0] = gevent.queue.Queue()
 
@@ -145,7 +145,7 @@ class BM:
 
                 def _make_send(r):
                     def _send(j, o):
-                        self._send1(j, (r, o))
+                        self.send1(j, (r, o))
 
                     return _send
 
@@ -326,6 +326,6 @@ class BM:
                     self.bc_instances[sid][leader] = None
                 except:
                     pass
-        self._send2(-1, ('', ('RETURN', (sid, send_list))))
+        self.send2(-1, ('', ('RETURN', (sid, send_list))))
 
         return mvbaout

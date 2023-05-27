@@ -33,5 +33,7 @@ def parse():
                         help='point to start measure tps and latency', type=int, default=0)
     parser.add_argument('--Y', metavar='Y', required=False,
                         help='RECOVER SEND BYTES', type=int, default=10000)
+    parser.add_argument('--unbalanced_workload', metavar='unbalanced_workload', required=False,
+                        help='support unbalanced_workload for test', type=bool, default=False)
 
     return parser.parse_args()

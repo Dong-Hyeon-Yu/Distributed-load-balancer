@@ -190,6 +190,8 @@ class RbcBdt():
             self.e_time = time.time()
             if self.logger != None:
                 self.logger.info("node %d breaks in %f seconds in epoch %d with total delivered Txs %d (%d) and average delay %f and average VC delay %f" % (self.id, self.e_time-self.s_time, e, self.txcnt, self.actual_txcnt, self.txdelay, sum(self.vcdelay)/len(self.vcdelay)) )
+                self.logger.info(
+                    'Current Block\'s TPS at Node %d: ' % self.id + str(self.txcnt / (self.e_time - self.s_time)))
             else:
                 print("node %d breaks in %f seconds with total delivered Txs %d and average delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay))
 
@@ -454,13 +456,7 @@ class RbcBdt():
             pass
         else:
             # Select B transactions (TODO: actual random selection)
-            tx_to_send = []
-
-            try:
-                tx_to_send.append(self.transaction_buffer.fetch_tx())
-                tx_to_send = tx_to_send * self.FALLBACK_BATCH_SIZE
-            except IndexError as e:
-                tx_to_send.append("Dummy")
+            tx_to_send = self.transaction_buffer.fetch_tx_batch(self.FALLBACK_BATCH_SIZE)
 
             my_prbc_input = Queue(1)
 

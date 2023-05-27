@@ -1,3 +1,5 @@
+from enum import Enum
+
 from gevent import monkey; monkey.patch_all(thread=False)
 
 import time
@@ -17,7 +19,9 @@ class NetworkClient (Process):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'.encode('utf-8')
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: mpValue, stop: mpValue, bft_running: mpValue = mpValue(c_bool, False), dynamic=False):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable,
+                 client_ready: mpValue, stop: mpValue, bft_running: mpValue = mpValue(c_bool, False),
+                 dynamic=False):
 
         self.bft_running = bft_running
 
@@ -165,8 +169,8 @@ class NetworkClient (Process):
             try:
                 j, o = self.client_from_bft()
                 #o = self.send_queue[j].get_nowait()
-                #print('send' + str((j, o)))
-                #self.logger.info('send' + str((j, o)))
+                # print('send' + str((j, o)))
+                # self.logger.debug('send' + str((j, o)))
                 try:
                     #self._send(j, pickle.dumps(o))
                     if j == -1: # -1 means broadcast

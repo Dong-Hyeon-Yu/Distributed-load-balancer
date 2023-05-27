@@ -1,11 +1,24 @@
 from abc import ABC, abstractmethod
-from typing import Set, List
+from typing import Set, List, Callable
+from nodes.utils.workload_generator import zipfian_coefficient
 
 
 class BaseTxStorage(ABC):
 
+    def bootstrap(self, node_id, batch_size, epoch, the_number_of_nodes, tx_size=250, unbalanced_workload=False,
+                  dist_func: Callable = zipfian_coefficient, *args) -> int:
+        if unbalanced_workload:
+            return self._bootstrap_unbalanced_workload(node_id, batch_size, epoch, the_number_of_nodes, tx_size, dist_func, *args)
+        else:
+            return self._bootstrap_balanced_workload(batch_size * epoch, tx_size)
+
     @abstractmethod
-    def bootstrap(self, batch_size, tx_size):
+    def _bootstrap_balanced_workload(self, batch_size, tx_size) -> int:
+        pass
+
+    @abstractmethod
+    def _bootstrap_unbalanced_workload(self, node_id, batch_size, epoch, the_number_of_nodes, tx_size,
+                                       dist_func: Callable, *args) -> int:
         pass
 
     @abstractmethod

@@ -1,6 +1,6 @@
 from gevent import monkey;
 
-from honeybadgerbft.core.reliablebroadcast import merkleVerify, decode
+from BFTs.honeybadgerbft.core.reliablebroadcast import merkleVerify, decode
 
 monkey.patch_all(thread=False)
 
@@ -58,7 +58,7 @@ class RECOVER(Process):
         self.sSK1 = sSK1
         self.sPK2s = sPK2s
         self.sSK2 = sSK2
-        self._recv = recv
+        self.recv = recv
         self.logger = logger
         self.K = K
 
@@ -106,7 +106,7 @@ class RECOVER(Process):
             while True:
                 try:
                     gevent.sleep(0)
-                    (sender, (r, msg)) = self._recv()
+                    (sender, (r, msg)) = self.recv()
                     if msg[0] == 'RETURN':
                         self.retrieval_recv.put((sender, msg))
                 except:

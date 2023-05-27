@@ -96,8 +96,8 @@ class RotatingLeaderHotstuff():
         self.sSK2 = sSK2
         self.ePK = ePK
         self.eSK = eSK
-        self._send = send
-        self._recv = recv
+        self.send = send
+        self.recv = recv
         self.logger = logger.get_consensus_logger(pid)
         self.epoch = 0  # Current block number
         self.transaction_buffer: BaseTxStorage = QueueTxStorage()
@@ -128,15 +128,15 @@ class RotatingLeaderHotstuff():
         #if self.mute:
         #    muted_nodes = [each * 3 + 1 for each in range(int((self.N-1)/3))]
         #    if self.id in muted_nodes:
-        #        self._send = lambda j, o: time.sleep(100)
-        #        self._recv = lambda: (time.sleep(100) for i in range(10000))
+        #        self.send = lambda j, o: time.sleep(100)
+        #        self.recv = lambda: (time.sleep(100) for i in range(10000))
 
         def _recv_loop():
             """Receive messages."""
             while True:
                 #gevent.sleep(0)
                 try:
-                    (sender, (r, msg)) = self._recv()
+                    (sender, (r, msg)) = self.recv()
                     # Maintain an *unbounded* recv queue for each epoch
                     if r not in self._per_epoch_recv:
                         self._per_epoch_recv[r] = Queue()
@@ -163,9 +163,9 @@ class RotatingLeaderHotstuff():
 
             def make_epoch_send(e):
                 def _send(j, o):
-                    self._send(j, (e, o))
+                    self.send(j, (e, o))
                 def _send_1(j, o):
-                    self._send(j, (e+1, o))
+                    self.send(j, (e + 1, o))
                 return _send, _send_1
 
             send_e, _send_e_1 = make_epoch_send(e)
@@ -184,6 +184,7 @@ class RotatingLeaderHotstuff():
             self.e_time = time.time()
             if self.logger != None:
                 self.logger.info("node %d breaks in %f seconds in epoch %d with total delivered Txs %d and average delay %f" % (self.id, self.e_time-self.s_time, e, self.txcnt, self.txdelay) )
+                self.logger.info('Current Block\'s TPS at Node %d: ' % self.id + str(self.txcnt/(self.e_time-self.s_time)))
             else:
                 print("node %d breaks in %f seconds with total delivered Txs %d and average delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay))
 

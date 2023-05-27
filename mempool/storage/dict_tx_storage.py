@@ -1,8 +1,10 @@
 import json
-from typing import List
+from typing import List, Callable
 
 from mempool.data.transaction import Transaction
 from mempool.storage.base_tx_storage import BaseTxStorage
+from mempool.storage.gevent_support import gevent_support
+from nodes.utils.workload_generator import zipfian_coefficient
 
 
 class DictTxStorage(BaseTxStorage):
@@ -14,9 +16,18 @@ class DictTxStorage(BaseTxStorage):
     def __init__(self):
         self.storage: dict = dict()
 
-    def bootstrap(self, batch_size, tx_size=250):
+    def _bootstrap_balanced_workload(self, batch_size, tx_size) -> int:
         tx_list = [Transaction.dummy(tx_size) for _ in range(batch_size)]
         self.store_tx_batch(tx_list)
+        return len(tx_list)
+
+    def _bootstrap_unbalanced_workload(self, node_id, batch_size, epoch, the_number_of_nodes, tx_size,
+                                       dist_func: Callable = zipfian_coefficient, *args) -> int:
+        total_tx = batch_size * epoch * the_number_of_nodes
+        modified_total_tx = round(total_tx * dist_func(node_id, the_number_of_nodes))
+        tx_list = [Transaction.dummy(tx_size) for _ in range(modified_total_tx)]
+        self.store_tx_batch(tx_list)
+        return len(tx_list)
 
     def fetch_tx_batch(self, batch_size) -> List[Transaction]:
         tx_batch = []
@@ -32,6 +43,7 @@ class DictTxStorage(BaseTxStorage):
         for tx in tx_batch:
             self.store_tx(tx)
 
+    @gevent_support
     def store_tx(self, tx: Transaction):
         if self.storage.get(tx.hash) is None:
             self.storage[tx.hash] = tx

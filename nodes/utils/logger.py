@@ -20,9 +20,11 @@ def get_consensus_logger(id: int):
 def bootstrap_log(fun):
     def prepare_bootstrap(*args, **kwargs):
         self = args[0]
+        print('bootstrapping...')
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
         fun(*args, **kwargs)
         self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
+        print(f'done bootstrapping... [{self.id}]')
     return prepare_bootstrap
 
 

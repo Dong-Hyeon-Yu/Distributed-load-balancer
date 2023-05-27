@@ -19,21 +19,31 @@ from ctypes import c_bool
 
 
 def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue,
-                         stop: mpValue, protocol="mule", mute=False, F=100, debug=False, omitfast=False, countpoint=0):
+                         stop: mpValue, protocol="mule", mute=False, F=100, debug=False, omitfast=False,
+                         unbalanced_workload=False):
     bft = None
     if protocol == 'dumbo':
-        bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug)
+        bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug,
+                           unbalanced_workload=unbalanced_workload)
+
     elif protocol == "bdt":
-        bft = BdtBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast)
+        bft = BdtBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute,
+                         omitfast=omitfast, unbalanced_workload=unbalanced_workload)
+
     elif protocol == "rbc-bdt":
-        bft = RbcBdtBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast)
+        bft = RbcBdtBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute,
+                            omitfast=omitfast, unbalanced_workload=unbalanced_workload)
+
     elif protocol == 'sdumbo':
-        bft = SDumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug)
+        bft = SDumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug,
+                            unbalanced_workload=unbalanced_workload)
+
     elif protocol == 'ng':
-        bft = NGSNode(sid, i, S, B, F, N, f, bft_from_server, bft_to_client, ready, stop, mute=mute, countpoint=countpoint)
+        bft = NGSNode(sid, i, S, B, F, N, f, bft_from_server, bft_to_client, ready, stop, mute=mute)
+
     elif protocol == "hotstuff":
         bft = RotatingHotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K,
-                                      mute=mute, omitfast=omitfast)
+                                      mute=mute, omitfast=omitfast, unbalanced_workload=unbalanced_workload)
     else:
         print("no such a BFT protocol.")
     return bft
@@ -60,6 +70,7 @@ if __name__ == '__main__':
     D = args.D
     O = args.O
     C = args.C
+    unbalanced_workload = args.unbalanced_workload
 
     # Random generator
     rnd = random.Random(sid)
@@ -102,7 +113,7 @@ if __name__ == '__main__':
         else:
             net_client = socket_client.NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop)
         net_server = NetworkServer(my_address[1], my_address[0], i, addresses, server_to_bft, server_ready, stop)
-        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F, D, O, C)
+        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F, D, O, unbalanced_workload)
 
         net_server.start()
         net_client.start()
@@ -113,6 +124,8 @@ if __name__ == '__main__':
 
         with net_ready.get_lock():
             net_ready.value = True
+        print("network ok...")
+
 
         bft_thread = Greenlet(bft.run)
         bft_thread.start()

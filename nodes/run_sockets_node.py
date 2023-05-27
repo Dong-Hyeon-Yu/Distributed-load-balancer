@@ -15,11 +15,13 @@ from multiprocessing import Value as mpValue, Queue as mpQueue
 from ctypes import c_bool
 
 
-def instantiate_bft_node(sid, i, B, N, f, K, S, bft_from_server1: Callable, bft_to_client1: Callable,bft_from_server2: Callable, bft_to_client2: Callable, ready: mpValue,
-                         stop: mpValue, protocol="mule", mute=False, F=100, debug=False, omitfast=False):
+def instantiate_bft_node(sid, i, B, N, f, K, S, bft_from_server1: Callable, bft_to_client1: Callable,
+                         bft_from_server2: Callable, bft_to_client2: Callable, ready: mpValue, stop: mpValue,
+                         protocol="mule", mute=False, F=100, debug=False, omitfast=False, unbalanced_workload=False):
     bft = None
     if protocol == 'dl':
-        bft = DL2Node(sid, i, S, B, F, N, f, bft_from_server1, bft_to_client1, bft_from_server2, bft_to_client2, ready, stop, K, mute=mute)
+        bft = DL2Node(sid, i, S, B, F, N, f, bft_from_server1, bft_to_client1, bft_from_server2, bft_to_client2, ready,
+                      stop, K, mute=mute, unbalanced_workload=unbalanced_workload)
 
     else:
         print("Only support dl")
@@ -46,6 +48,7 @@ if __name__ == '__main__':
     D = args.D
     O = args.O
     BYTE = args.Y
+    unbalanced_workload = args.unbalanced_workload
 
     # Random generator
     rnd = random.Random(sid)
@@ -105,7 +108,7 @@ if __name__ == '__main__':
         net_client1 = NetworkClients(my_address1[1], my_address2[1], my_address1[0], my_address2[0], i, addresses1, addresses2,
                                      client_from_bft1, client_from_bft2, client_ready1, client_ready2, stop, stop, BYTE, 0, 1)
         bft = instantiate_bft_node(sid, i, B, N, f, K, S, bft_from_server1, bft_to_client1,
-                                   bft_from_server2, bft_to_client2, net_ready, stop, P, M, F, D, O)
+                                   bft_from_server2, bft_to_client2, net_ready, stop, P, M, F, D, O, unbalanced_workload)
 
         net_server1.start()
         net_client1.start()
