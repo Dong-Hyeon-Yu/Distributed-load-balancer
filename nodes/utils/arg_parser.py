@@ -29,4 +29,9 @@ def parse():
                         help='whether to debug mode', type=bool, default=False)
     parser.add_argument('--O', metavar='O', required=False,
                         help='whether to omit the fast path', type=bool, default=False)
+    parser.add_argument('--C', metavar='C', required=False,
+                        help='point to start measure tps and latency', type=int, default=0)
+    parser.add_argument('--Y', metavar='Y', required=False,
+                        help='RECOVER SEND BYTES', type=int, default=10000)
+
     return parser.parse_args()

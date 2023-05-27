@@ -17,7 +17,7 @@ class NetworkClient (Process):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'.encode('utf-8')
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: mpValue, stop: mpValue, bft_running: mpValue = mpValue(c_bool, False), dynamic=True):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: mpValue, stop: mpValue, bft_running: mpValue = mpValue(c_bool, False), dynamic=False):
 
         self.bft_running = bft_running
 

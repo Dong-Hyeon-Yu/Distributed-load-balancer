@@ -1,7 +1,4 @@
 import json
-
-import jsons
-
 from mempool.data.transaction import Transaction
 from mempool.storage.base_tx_storage import BaseTxStorage
 from mempool.storage.dict_tx_storage import DictTxStorage

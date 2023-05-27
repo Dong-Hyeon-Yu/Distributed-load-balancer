@@ -1,4 +1,4 @@
-from gevent import monkey; monkey.patch_all(thread=False)
+from gevent import monkey;monkey.patch_all(thread=False)
 
 import os
 import time
@@ -10,25 +10,32 @@ from implements.dumbo_node import DumboBFTNode
 from implements.bdt_node import BdtBFTNode
 from implements.rbcbdt_node import RbcBdtBFTNode
 from implements.rotatinghotstuff_node import RotatingHotstuffBFTNode
+from implements.ng_k_s_node import NGSNode
+from implements.sdumbo_node import SDumboBFTNode
+from network import socket_client_ng, socket_client
 from network.socket_server import NetworkServer
-from network.socket_client import NetworkClient
 from multiprocessing import Value as mpValue, Queue as mpQueue
 from ctypes import c_bool
 
 
 def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue,
-                         stop: mpValue, protocol="mule", mute=False, F=100, debug=False, omitfast=False, bft_running: mpValue=mpValue(c_bool, False)):
+                         stop: mpValue, protocol="mule", mute=False, F=100, debug=False, omitfast=False, countpoint=0):
     bft = None
     if protocol == 'dumbo':
-        bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug, bft_running=bft_running)
+        bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug)
     elif protocol == "bdt":
-        bft = BdtBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast, bft_running=bft_running)
-    elif protocol == "hotstuff":
-        bft = RotatingHotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast, bft_running=bft_running)
+        bft = BdtBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast)
     elif protocol == "rbc-bdt":
-        bft = RbcBdtBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast, network=bft_running)
+        bft = RbcBdtBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast)
+    elif protocol == 'sdumbo':
+        bft = SDumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug)
+    elif protocol == 'ng':
+        bft = NGSNode(sid, i, S, B, F, N, f, bft_from_server, bft_to_client, ready, stop, mute=mute, countpoint=countpoint)
+    elif protocol == "hotstuff":
+        bft = RotatingHotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K,
+                                      mute=mute, omitfast=omitfast)
     else:
-        print("Only support dumbo or mule or stable-hs or rotating-hs")
+        print("no such a BFT protocol.")
     return bft
 
 
@@ -52,6 +59,7 @@ if __name__ == '__main__':
     F = args.F
     D = args.D
     O = args.O
+    C = args.C
 
     # Random generator
     rnd = random.Random(sid)
@@ -75,16 +83,11 @@ if __name__ == '__main__':
         assert all([node is not None for node in addresses])
         print("hosts.config is correctly read")
 
-        # bft_from_server, server_to_bft = mpPipe(duplex=True)
-        # client_from_bft, bft_to_client = mpPipe(duplex=True)
-
         client_bft_mpq = mpQueue()
-        #client_from_bft = client_bft_mpq.get
         client_from_bft = lambda: client_bft_mpq.get(timeout=0.00001)
         bft_to_client = client_bft_mpq.put_nowait
 
         server_bft_mpq = mpQueue()
-        #bft_from_server = server_bft_mpq.get
         bft_from_server = lambda: server_bft_mpq.get(timeout=0.00001)
         server_to_bft = server_bft_mpq.put_nowait
 
@@ -92,12 +95,15 @@ if __name__ == '__main__':
         server_ready = mpValue(c_bool, False)
         net_ready = mpValue(c_bool, False)
         stop = mpValue(c_bool, False)
-        bft_running = mpValue(c_bool, False)  # True = good network; False = bad network
 
+        if P == 'ng':
+            net_client = socket_client_ng.NetworkClient(my_address[1], my_address[0], i, addresses,
+                                                                client_from_bft, client_ready, stop)
+        else:
+            net_client = socket_client.NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop)
         net_server = NetworkServer(my_address[1], my_address[0], i, addresses, server_to_bft, server_ready, stop)
-        net_client = NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop, bft_running, dynamic=False)
-        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F, D, O, bft_running)
-        #print(O)
+        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F, D, O, C)
+
         net_server.start()
         net_client.start()
 
@@ -111,6 +117,7 @@ if __name__ == '__main__':
         bft_thread = Greenlet(bft.run)
         bft_thread.start()
         bft_thread.join()
+        print("BFT finished. Terminating net servers...")
 
         with stop.get_lock():
             stop.value = True
@@ -120,6 +127,7 @@ if __name__ == '__main__':
         time.sleep(1)
         net_server.terminate()
         net_server.join()
+        print("Servers terminated.")
 
     except FileNotFoundError or AssertionError as e:
         traceback.print_exc()
