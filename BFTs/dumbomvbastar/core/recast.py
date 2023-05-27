@@ -5,10 +5,9 @@ import time
 from collections import defaultdict
 
 import gevent
-from gevent import monkey
 from crypto.cryptoprimitives.ecdsa.ecdsa import ecdsa_vrfy, ecdsa_sign
-from dumbobft.core.provablereliablebroadcast import encode, decode
-from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
+from BFTs.dumbobft.core.provablereliablebroadcast import encode, decode
+from BFTs.honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 
 
 def recastsubprotocol(pid, sid, N, f,  PK2s, SK2, receive, send, getstore, getlock):

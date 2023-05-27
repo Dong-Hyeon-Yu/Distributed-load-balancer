@@ -1,34 +1,21 @@
-from gevent import monkey; monkey.patch_all(thread=False)
+from gevent import monkey;monkey.patch_all(thread=False)
 
 import json
-import logging
-import os
 import traceback, time
 import gevent
 from collections import namedtuple
 from enum import Enum
 from gevent import Greenlet
 from gevent.queue import Queue
-from speedydumbobft.core.speedydumbocommonsubset import speedydumbocommonsubset
-from speedydumbobft.core.provablebroadcast import provablebroadcast
-from speedydumbobft.core.validators import pb_validate
-from dumbobft.core.speedmvbacommonsubset import speedmvbacommonsubset
-from honeybadgerbft.core.honeybadger_block import honeybadger_block
-from honeybadgerbft.exceptions import UnknownTagError
-
-
-def set_consensus_log(id: int):
-    logger = logging.getLogger("consensus-node-"+str(id))
-    logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
-    if 'log' not in os.listdir(os.getcwd()):
-        os.mkdir(os.getcwd() + '/log')
-    full_path = os.path.realpath(os.getcwd()) + '/log/' + "consensus-node-"+str(id) + ".log"
-    file_handler = logging.FileHandler(full_path)
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    return logger
+from BFTs.speedydumbobft.core.speedydumbocommonsubset import speedydumbocommonsubset
+from BFTs.speedydumbobft.core.provablebroadcast import provablebroadcast
+from BFTs.speedydumbobft.core.validators import pb_validate
+from BFTs.dumbobft.core.speedmvbacommonsubset import speedmvbacommonsubset
+from BFTs.honeybadgerbft.core.honeybadger_block import honeybadger_block
+from BFTs.honeybadgerbft.exceptions import UnknownTagError
+from nodes.utils import logger
+from mempool.storage.base_tx_storage import BaseTxStorage
+from mempool.storage.queue_tx_storage import QueueTxStorage
 
 
 class BroadcastTag(Enum):
@@ -105,9 +92,9 @@ class SpeedyDumbo():
         self.eSK = eSK
         self._send = send
         self._recv = recv
-        self.logger = set_consensus_log(pid)
+        self.logger = logger.get_consensus_logger(pid)
         self.round = 0  # Current block number
-        self.transaction_buffer = Queue()
+        self.transaction_buffer: BaseTxStorage = QueueTxStorage()
         self._per_round_recv = {}  # Buffer of incoming messages
 
         self.K = K
@@ -118,16 +105,6 @@ class SpeedyDumbo():
 
         self.mute = mute
         self.debug = debug
-
-    def submit_tx(self, tx):
-        """Appends the given transaction to the transaction buffer.
-        :param tx: Transaction to append to the buffer.
-        """
-        #print('backlog_tx', self.id, tx)
-        #if self.logger != None:
-        #    self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
-        # Insert transactions to the end of TX buffer
-        self.transaction_buffer.put_nowait(tx)
 
     def run_bft(self):
         """Run the Dumbo protocol."""
@@ -171,7 +148,7 @@ class SpeedyDumbo():
             # Select B transactions (TODO: actual random selection)
             tx_to_send = []
             for _ in range(self.B):
-                tx_to_send.append(self.transaction_buffer.get_nowait())
+                tx_to_send.append(self.transaction_buffer.fetch_tx())
 
             def _make_send(r):
                 def _send(j, o):
@@ -348,13 +325,9 @@ class SpeedyDumbo():
         _output = honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
                           propose=json.dumps(tx_to_send),
                           acs_put_in=my_pb_input.put_nowait, acs_get_out=dumboacs_thread.get,
-                          tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get,logger=self.logger)
+                          tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get, logger=self.logger)
 
-        block = set()
-        for batch in _output:
-            decoded_batch = json.loads(batch.decode())
-            for tx in decoded_batch:
-                block.add(tx)
+        block = self.transaction_buffer.remove_committed_tx_from_raw_block(_output)
 
         dumboacs_thread.kill()
         bc_recv_loop_thread.kill()
@@ -362,6 +335,6 @@ class SpeedyDumbo():
         for j in range(N):
             pb_threads[j].kill()
 
-        return list(block)
+        return block
 
     # TODO： make help and callhelp threads to handle the rare cases when vacs (vaba) returns None

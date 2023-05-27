@@ -2,45 +2,24 @@ from gevent import monkey; monkey.patch_all(thread=False)
 
 import hashlib
 import json
-import logging
-import os
 import pickle
 import traceback
 import gevent
 import time
-import numpy as np
 from gevent import Greenlet
 from gevent.event import Event
 from gevent.queue import Queue
 from collections import namedtuple
 from enum import Enum
 
-from BFTs.dumbobft.core.validators import prbc_validate
 from BFTs.bdtbft.core.hsfastpath import hsfastpath
-from BFTs.bdtbft.core.twovalueagreement import twovalueagreement
-from BFTs.dumbobft.core.validatedcommonsubset import validatedcommonsubset
-from BFTs.dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
-from BFTs.dumbobft.core.dumbocommonsubset import dumbocommonsubset
-from BFTs.honeybadgerbft.core.honeybadger_block import honeybadger_block
-from crypto.cryptoprimitives.threshsig.boldyreva import serialize, deserialize1
 from crypto.cryptoprimitives.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
-from BFTs.honeybadgerbft.core.commoncoin import shared_coin
 from BFTs.honeybadgerbft.exceptions import UnknownTagError
-from crypto.cryptoprimitives.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PrivateKey, PublicKey
+from crypto.cryptoprimitives.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PrivateKey
+from nodes.utils import logger
+from mempool.storage.base_tx_storage import BaseTxStorage
+from mempool.storage.queue_tx_storage import QueueTxStorage
 
-
-def set_consensus_log(id: int):
-    logger = logging.getLogger("consensus-node-"+str(id))
-    logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
-    if 'log' not in os.listdir(os.getcwd()):
-        os.mkdir(os.getcwd() + '/log')
-    full_path = os.path.realpath(os.getcwd()) + '/log/' + "consensus-node-"+str(id) + ".log"
-    file_handler = logging.FileHandler(full_path)
-    file_handler.setFormatter(formatter) 
-    logger.addHandler(file_handler)
-    return logger
 
 def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()
@@ -119,9 +98,9 @@ class RotatingLeaderHotstuff():
         self.eSK = eSK
         self._send = send
         self._recv = recv
-        self.logger = set_consensus_log(pid)
+        self.logger = logger.get_consensus_logger(pid)
         self.epoch = 0  # Current block number
-        self.transaction_buffer = Queue()
+        self.transaction_buffer: BaseTxStorage = QueueTxStorage()
         self._per_epoch_recv = {}  # Buffer of incoming messages
 
         self.K = K
@@ -135,16 +114,6 @@ class RotatingLeaderHotstuff():
 
         self.mute = mute
         self.omitfast = omitfast
-
-    def submit_tx(self, tx):
-        """Appends the given transaction to the transaction buffer.
-
-        :param tx: Transaction to append to the buffer.
-        """
-        # print('backlog_tx', self.id, tx)
-        #if self.logger != None:
-        #    self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
-        self.transaction_buffer.put_nowait(tx)
 
     def run_bft(self):
         """Run the Mule protocol."""
@@ -300,7 +269,7 @@ class RotatingLeaderHotstuff():
                 fast_blocks.put(o)
 
             fast_thread = gevent.spawn(hsfastpath, epoch_id, pid, N, f, leader,
-                                   self.transaction_buffer.get_nowait, fastpath_output,
+                                   self.transaction_buffer.fetch_tx, fastpath_output,
                                    self.SLOTS_NUM, self.FAST_BATCH_SIZE, T,
                                    hash_genesis, self.sPK2s, self.sSK2,
                                    fast_recv.get, fastpath_send, logger=self.logger, omitfast=self.omitfast)

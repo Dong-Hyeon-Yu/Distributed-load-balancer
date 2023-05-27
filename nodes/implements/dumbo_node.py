@@ -1,7 +1,6 @@
-import json
-from mempool.data.transaction import Transaction
 from mempool.storage.base_tx_storage import BaseTxStorage
 from mempool.storage.dict_tx_storage import DictTxStorage
+from mempool.storage.queue_tx_storage import QueueTxStorage
 from nodes.utils.logger import bootstrap_log
 from gevent import monkey;monkey.patch_all(thread=False)
 
@@ -19,7 +18,7 @@ class DumboBFTNode (Dumbo, Runnable):
 
     def __init__(self, sid, id, B, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue,
                  stop: mpValue, K = 3, mode='debug', mute=False, debug=False, bft_running: mpValue = mpValue(c_bool, False),
-                 tx_storage: BaseTxStorage = DictTxStorage()):
+                 tx_storage: BaseTxStorage = QueueTxStorage()):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
         self.bft_from_server = bft_from_server
         self.bft_to_client = bft_to_client
@@ -33,39 +32,13 @@ class DumboBFTNode (Dumbo, Runnable):
                        self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute, debug=debug)
         self.transaction_buffer: BaseTxStorage = tx_storage
 
-    # override Dumbo
-    def submit_tx(self, tx):
-        self.transaction_buffer.store_tx_batch(tx)
-
-    # override Dumbo
-    def fetch_tx_batch(self):
-        return self.transaction_buffer.fetch_tx_batch(self.B)
-
-    # override Dumbo
-    def decode_block(self, raw_block):
-        block = set()
-        for batch in raw_block:
-            decoded_batch = json.loads(batch.decode(), object_hook=lambda tx: Transaction.from_json(tx))
-            for tx in decoded_batch:
-                block.add(tx)
-
-        return list(block)
-
-    def remove_committed_tx_from_storage(self, block):
-        for tx in block:
-            self.transaction_buffer.remove_by_hash(tx.hash)
-
     # override Runnable
     @bootstrap_log
     def prepare_bootstrap(self):
         if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
             for _ in range(self.K):
-                tx_list = []
-                for r in range(self.B):
-                    tx_list.append(Transaction.dummy(250))
-                    DumboBFTNode.submit_tx(self, tx_list)
-
-                self.logger.info(f'node id {self.id} just inserts {self.B} TXs')
+                self.transaction_buffer.bootstrap(self.B, 250)
+                self.logger.info(f'node id {self.id} just inserts {self.B} TXs (total: {self.transaction_buffer.size()})')
         else:
             pass
 

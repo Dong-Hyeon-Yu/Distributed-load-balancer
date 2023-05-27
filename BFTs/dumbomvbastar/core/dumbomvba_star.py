@@ -11,10 +11,10 @@ from collections import defaultdict
 from gevent.queue import Queue
 
 from crypto.cryptoprimitives.ecdsa.ecdsa import ecdsa_vrfy
-from dumbomvbastar.core.provabledispersal import provabledispersalbroadcast
-from dumbomvbastar.core.recast import recastsubprotocol
-from honeybadgerbft.exceptions import UnknownTagError
-from speedmvba.core.smvba_e_cp import speedmvba
+from BFTs.dumbomvbastar.core.provabledispersal import provabledispersalbroadcast
+from BFTs.dumbomvbastar.core.recast import recastsubprotocol
+from BFTs.honeybadgerbft.exceptions import UnknownTagError
+from BFTs.speedmvba.core.smvba_e_cp import speedmvba
 
 
 class MessageTag(Enum):

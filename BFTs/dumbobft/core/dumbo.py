@@ -1,16 +1,8 @@
-import json
-from types import SimpleNamespace
-
-from gevent import monkey;
-
-from mempool.data.transaction import Transaction
-
-monkey.patch_all(thread=False)
+from gevent import monkey;monkey.patch_all(thread=False)
 
 import jsons
-import logging
-import os
-import traceback, time
+import traceback
+import time
 import gevent
 from collections import namedtuple
 from enum import Enum
@@ -22,20 +14,9 @@ from BFTs.dumbobft.core.validatedcommonsubset import validatedcommonsubset
 from BFTs.dumbobft.core.validators import prbc_validate
 from BFTs.honeybadgerbft.core.honeybadger_block import honeybadger_block
 from BFTs.honeybadgerbft.exceptions import UnknownTagError
-
-
-def set_consensus_log(id: int):
-    logger = logging.getLogger("consensus-node-"+str(id))
-    logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
-    if 'log' not in os.listdir(os.getcwd()):
-        os.mkdir(os.getcwd() + '/log')
-    full_path = os.path.realpath(os.getcwd()) + '/log/' + "consensus-node-"+str(id) + ".log"
-    file_handler = logging.FileHandler(full_path)
-    file_handler.setFormatter(formatter)  # 可以通过setFormatter指定输出格式
-    logger.addHandler(file_handler)
-    return logger
+from mempool.storage.base_tx_storage import BaseTxStorage
+from mempool.storage.queue_tx_storage import QueueTxStorage
+from nodes.utils import logger
 
 
 class BroadcastTag(Enum):
@@ -112,9 +93,9 @@ class Dumbo():
         self.eSK = eSK
         self._send = send
         self._recv = recv
-        self.logger = set_consensus_log(pid)
+        self.logger = logger.get_consensus_logger(pid)
         self.round = 0  # Current block number
-        self.transaction_buffer = Queue()
+        self.transaction_buffer: BaseTxStorage = QueueTxStorage()
         self._per_round_recv = {}  # Buffer of incoming messages
 
         self.K = K
@@ -126,33 +107,6 @@ class Dumbo():
         self.mute = mute
         self.debug = debug
 
-    def submit_tx(self, tx):
-        """Appends the given transaction to the transaction buffer.
-        :param tx: Transaction to append to the buffer.
-        """
-        #print('backlog_tx', self.id, tx)
-        #if self.logger != None:
-        #    self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
-        # Insert transactions to the end of TX buffer
-        self.transaction_buffer.put_nowait(tx)
-
-    def fetch_tx_batch(self):
-        tx_to_send = []
-        for _ in range(self.B):
-            tx_to_send.append(self.transaction_buffer.get_nowait())
-        return tx_to_send
-
-    def decode_block(self, raw_block):
-        block = set()
-        for batch in raw_block:
-            decoded_batch = json.loads(batch.decode())
-            for tx in decoded_batch:
-                block.add(tx)
-
-        return list(block)
-
-    def remove_committed_tx_from_storage(self, block):
-        pass
 
     def run_bft(self):
         """Run the Dumbo protocol."""
@@ -204,7 +158,7 @@ class Dumbo():
                 self._per_round_recv[r] = Queue()
 
             # Select B transactions (TODO: actual random selection)
-            tx_to_send = self.fetch_tx_batch()
+            tx_to_send = self.transaction_buffer.fetch_tx_batch(self.B)
 
             def _make_send(r):
                 def _send(j, o):
@@ -279,8 +233,6 @@ class Dumbo():
 
         vacs_input = Queue(1)
         vacs_output = Queue(1)
-
-
 
         recv_queues = BroadcastReceiverQueues(
             ACS_PRBC=prbc_recvs,
@@ -392,8 +344,7 @@ class Dumbo():
 
         bc_recv_loop_thread.kill()
 
-        block = self.decode_block(_output)
-        self.remove_committed_tx_from_storage(block)
+        block = self.transaction_buffer.remove_committed_tx_from_raw_block(_output)
 
         return block
 

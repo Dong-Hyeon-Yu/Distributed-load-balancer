@@ -1,25 +1,17 @@
-from gevent import monkey;
-
-
-from crypto.cryptoprimitives.ecdsa.ecdsa import ecdsa_vrfy, ecdsa_sign
-from speedmvba.core.spbc_ec_cp import strongprovablebroadcast
-
-monkey.patch_all(thread=False)
-import hashlib
-import pickle
-import time
-
+from gevent import monkey; monkey.patch_all(thread=False)
+from gevent.queue import Queue
 import gevent
-from collections import namedtuple
 from gevent import Greenlet
 from gevent.event import Event
+
+import hashlib
+import pickle
+from collections import namedtuple, defaultdict
 from enum import Enum
-from collections import defaultdict
-from gevent.queue import Queue
 
-
-
-from honeybadgerbft.exceptions import UnknownTagError
+from crypto.cryptoprimitives.ecdsa.ecdsa import ecdsa_vrfy, ecdsa_sign
+from BFTs.speedmvba.core.spbc_ec_cp import strongprovablebroadcast
+from BFTs.honeybadgerbft.exceptions import UnknownTagError
 
 
 class MessageTag(Enum):

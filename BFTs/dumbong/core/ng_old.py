@@ -1,28 +1,25 @@
-import gc
-from gevent import monkey;
+from gevent import monkey; monkey.patch_all(thread=False)
 from gevent.event import Event
-from dumbobft.core.validatedagreement import validatedagreement
-from speedmvba.core.smvba_e_cp import speedmvba
-
-monkey.patch_all(thread=False)
+from gevent import Greenlet
+from gevent.queue import Queue
 
 import hashlib
 import multiprocessing
 import pickle
-from crypto.ecdsa.ecdsa import ecdsa_vrfy
+from crypto.cryptoprimitives.ecdsa.ecdsa import ecdsa_vrfy
 from multiprocessing import Process, Queue
 import copy
 import logging
 import os
 import traceback, time
 import gevent
-import numpy as np
 from collections import namedtuple, defaultdict
 from enum import Enum
-from gevent import Greenlet
-from gevent.queue import Queue
-from honeybadgerbft.exceptions import UnknownTagError
-from dumbong.core.nwabc import nwatomicbroadcast
+
+from BFTs.honeybadgerbft.exceptions import UnknownTagError
+from BFTs.dumbong.core.nwabc import nwatomicbroadcast
+from BFTs.speedmvba.core.smvba_e_cp import speedmvba
+
 
 def set_consensus_log(id: int):
     logger = logging.getLogger("consensus-node-" + str(id))

@@ -8,12 +8,11 @@ from collections import namedtuple
 from enum import Enum
 
 import numpy as np
-from gevent import monkey
 from gevent.queue import Queue
-from dumbomvba.core.mvbacommonsubset import mvbacommonsubset
-from crypto.threshsig.boldyreva import deserialize1
-from honeybadgerbft.core.honeybadger_block import honeybadger_block
-from honeybadgerbft.exceptions import UnknownTagError
+from BFTs.dumbomvba.core.mvbacommonsubset import mvbacommonsubset
+from crypto.cryptoprimitives.threshsig.boldyreva import deserialize1
+from BFTs.honeybadgerbft.core.honeybadger_block import honeybadger_block
+from BFTs.honeybadgerbft.exceptions import UnknownTagError
 
 
 def set_consensus_log(id: int):

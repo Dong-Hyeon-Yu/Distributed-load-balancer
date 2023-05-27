@@ -1,4 +1,5 @@
-from typing import Set, List
+import json
+from typing import List
 
 from mempool.data.transaction import Transaction
 from mempool.storage.base_tx_storage import BaseTxStorage
@@ -12,6 +13,10 @@ class DictTxStorage(BaseTxStorage):
 
     def __init__(self):
         self.storage: dict = dict()
+
+    def bootstrap(self, batch_size, tx_size=250):
+        tx_list = [Transaction.dummy(tx_size) for _ in range(batch_size)]
+        self.store_tx_batch(tx_list)
 
     def fetch_tx_batch(self, batch_size) -> List[Transaction]:
         tx_batch = []
@@ -31,17 +36,35 @@ class DictTxStorage(BaseTxStorage):
         if self.storage.get(tx.hash) is None:
             self.storage[tx.hash] = tx
 
-    def find_by_hash(self, _hash) -> Transaction:
+    def find_by_id(self, _id) -> Transaction:
         """return Transaction or None"""
-        return self.storage.get(_hash)
+        return self.storage.get(_id)
 
-    def remove_by_hash(self, _hash: bytes) -> None:
-        if self.storage.get(str(_hash)):
-            del self.storage[_hash]
+    def remove_by_id(self, _id: bytes) -> None:
+        if self.storage.get(str(_id)):
+            del self.storage[_id]
 
-    def remove_all_by_hash(self, hashes: List[str]) -> None:
-        for _hash in hashes:
-            self.remove_by_hash(_hash)
+    def remove_all_by_id(self, _ids: List[bytes]) -> None:
+        for _hash in _ids:
+            self.remove_by_id(_hash)
 
     def size(self):
         return len(self.storage)
+
+    def remove_committed_tx(self, block: List[Transaction]):
+        for tx in block:
+            self.remove_by_id(tx.hash)
+
+    def remove_committed_tx_from_raw_block(self, raw_block: List) -> List:
+        block = self._decode_block(raw_block)
+        self.remove_committed_tx(block)
+        return block
+
+    def _decode_block(self, raw_block):
+        block = set()
+        for batch in raw_block:
+            decoded_batch = json.loads(batch.decode(), object_hook=lambda tx: Transaction.from_json(tx))
+            for tx in decoded_batch:
+                block.add(tx)
+
+        return list(block)

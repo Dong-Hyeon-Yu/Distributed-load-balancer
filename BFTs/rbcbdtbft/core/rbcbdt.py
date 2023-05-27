@@ -1,9 +1,7 @@
-from gevent import monkey; monkey.patch_all(thread=False)
+from gevent import monkey;monkey.patch_all(thread=False)
 
 import hashlib
 import json
-import logging
-import os
 import pickle
 import traceback
 import gevent
@@ -25,20 +23,9 @@ from crypto.cryptoprimitives.ecdsa.ecdsa import PrivateKey
 from BFTs.honeybadgerbft.core.commoncoin import shared_coin
 from BFTs.honeybadgerbft.exceptions import UnknownTagError
 from BFTs.dumbobft.core.validators import prbc_validate
-
-
-def set_consensus_log(id: int):
-    logger = logging.getLogger("consensus-node-"+str(id))
-    logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
-    if 'log' not in os.listdir(os.getcwd()):
-        os.mkdir(os.getcwd() + '/log')
-    full_path = os.path.realpath(os.getcwd()) + '/log/' + "consensus-node-"+str(id) + ".log"
-    file_handler = logging.FileHandler(full_path)
-    file_handler.setFormatter(formatter) 
-    logger.addHandler(file_handler)
-    return logger
+from nodes.utils import logger
+from mempool.storage.base_tx_storage import BaseTxStorage
+from mempool.storage.queue_tx_storage import QueueTxStorage
 
 def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()
@@ -54,7 +41,6 @@ class BroadcastTag(Enum):
     ACS_PRBC = 'ACS_PRBC'
     ACS_VACS = 'ACS_VACS'
     TPKE = 'TPKE'
-
 
 
 BroadcastReceiverQueues = namedtuple(
@@ -125,9 +111,9 @@ class RbcBdt():
         self.eSK = eSK
         self._send = send
         self._recv = recv
-        self.logger = set_consensus_log(pid)
+        self.logger = logger.get_consensus_logger(pid)
         self.epoch = 0  # Current block number
-        self.transaction_buffer = Queue()
+        self.transaction_buffer: BaseTxStorage = QueueTxStorage()
         self._per_epoch_recv = {}  # Buffer of incoming messages
 
         self.K = K
@@ -142,16 +128,6 @@ class RbcBdt():
 
         self.mute = mute
         self.omitfast = omitfast
-
-    def submit_tx(self, tx):
-        """Appends the given transaction to the transaction buffer.
-
-        :param tx: Transaction to append to the buffer.
-        """
-        # print('backlog_tx', self.id, tx)
-        #if self.logger != None:
-        #    self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
-        self.transaction_buffer.put(tx)
 
     def run_bft(self):
         """Run the Mule protocol."""
@@ -318,7 +294,7 @@ class RbcBdt():
                 fast_blocks.put(o)
 
             fast_thread = gevent.spawn(rbcfastpath, epoch_id, pid, N, f, leader,
-                                   self.transaction_buffer.get_nowait, fastpath_output,
+                                   self.transaction_buffer.fetch_tx, fastpath_output,
                                    self.SLOTS_NUM, self.FAST_BATCH_SIZE, T,
                                    hash_genesis, self.sPK2s, self.sSK2,
                                    fast_recv.get, fastpath_send, logger=self.logger, omitfast=self.omitfast)
@@ -481,7 +457,7 @@ class RbcBdt():
             tx_to_send = []
 
             try:
-                tx_to_send.append(self.transaction_buffer.get_nowait())
+                tx_to_send.append(self.transaction_buffer.fetch_tx())
                 tx_to_send = tx_to_send * self.FALLBACK_BATCH_SIZE
             except IndexError as e:
                 tx_to_send.append("Dummy")
@@ -578,11 +554,7 @@ class RbcBdt():
                                         acs_put_in=my_prbc_input.put_nowait, acs_get_out=dumboacs_thread.get,
                                         tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
 
-            block = set()
-            for batch in _output:
-                decoded_batch = json.loads(batch.decode())
-                for tx in decoded_batch:
-                    block.add(tx)
+            block = self.transaction_buffer.remove_committed_tx_from_raw_block(_output)
 
             end = time.time()
 

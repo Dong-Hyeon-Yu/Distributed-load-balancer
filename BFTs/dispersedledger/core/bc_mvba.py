@@ -1,44 +1,26 @@
-from gevent import monkey;
-
-from dispersedledger.core.PCBC import provablecbc
-from speedmvba.core.smvba_e import speedmvba
-
-monkey.patch_all(thread=False)
-
+from gevent import monkey;monkey.patch_all(thread=False)
 import hashlib
 import multiprocessing
 import pickle
-from multiprocessing import Process, Queue
+from multiprocessing import  Queue
 
 import json
-import logging
 import os
 import traceback, time
 import gevent
-import numpy as np
 from collections import namedtuple, defaultdict
 from enum import Enum
 from gevent import Greenlet
 from gevent.queue import Queue
 from gevent.event import Event
-from honeybadgerbft.exceptions import UnknownTagError
-
-
+from BFTs.honeybadgerbft.exceptions import UnknownTagError
+from BFTs.dispersedledger.core.PCBC import provablecbc
+from BFTs.speedmvba.core.smvba_e import speedmvba
+from nodes.utils import logger
+from mempool.storage.base_tx_storage import BaseTxStorage
+from mempool.storage.queue_tx_storage import QueueTxStorage
 # v : k nwabc instances
 # using smvba
-
-def set_consensus_log(id: int):
-    logger = logging.getLogger("consensus-node-" + str(id))
-    logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
-    if 'log' not in os.listdir(os.getcwd()):
-        os.mkdir(os.getcwd() + '/log')
-    full_path = os.path.realpath(os.getcwd()) + '/log/' + "consensus-node-" + str(id) + ".log"
-    file_handler = logging.FileHandler(full_path)
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    return logger
 
 
 def hash(x):
@@ -93,10 +75,10 @@ class BM:
         self._send1 = send1
         self._send2 = send2
         self._recv = recv
-        self.logger = set_consensus_log(pid)
+        self.logger = logger.get_consensus_logger(pid)
         self.K = K
         self.round = 0  # Current block number
-        self.transaction_buffer = gevent.queue.Queue()
+        self.transaction_buffer: BaseTxStorage = QueueTxStorage()
         self.bc_instances = defaultdict(lambda: defaultdict())
         self.share_bc = multiprocessing.Queue()
 
@@ -117,13 +99,6 @@ class BM:
         self.signal = multiprocessing.Value('d', 0)
 
         self.r = 1
-
-    def submit_tx(self, tx):
-        """Appends the given transaction to the transaction buffer.
-
-        :param tx: Transaction to append to the buffer.
-        """
-        self.transaction_buffer.put_nowait(tx)
 
     def run_bft(self):
         """Run the DL protocol."""
@@ -165,7 +140,7 @@ class BM:
 
                 tx_to_send = []
                 for _ in range(self.B):
-                    tx_to_send.append(self.transaction_buffer.get_nowait())
+                    tx_to_send.append(self.transaction_buffer.fetch_tx())
 
 
                 def _make_send(r):

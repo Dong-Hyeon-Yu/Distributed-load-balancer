@@ -1,12 +1,11 @@
 from gevent import monkey; monkey.patch_all(thread=False)
-import json
 import hashlib, pickle
 from collections import defaultdict
 import time
 
 import gevent
 
-from crypto.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PublicKey
+from crypto.cryptoprimitives.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PublicKey
 from gevent.queue import Queue
 
 stop = 0

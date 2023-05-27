@@ -1,7 +1,5 @@
-from gevent import monkey;
-monkey.patch_all(thread=False)
+from gevent import monkey; monkey.patch_all(thread=False)
 
-from speedmvba.core.spbc_ec import strongprovablebroadcast
 import hashlib
 import pickle
 import time
@@ -14,8 +12,8 @@ from enum import Enum
 from collections import defaultdict
 from gevent.queue import Queue
 from crypto.cryptoprimitives.ecdsa.ecdsa import ecdsa_vrfy, ecdsa_sign
-from honeybadgerbft.exceptions import UnknownTagError
-
+from BFTs.honeybadgerbft.exceptions import UnknownTagError
+from BFTs.speedmvba.core.spbc_ec import strongprovablebroadcast
 
 # from pympler.classtracker import ClassTracker
 

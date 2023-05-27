@@ -7,29 +7,16 @@ import pickle
 from crypto.cryptoprimitives.ecdsa.ecdsa import ecdsa_vrfy
 from multiprocessing import Process, Queue
 import copy
-import logging
 import os
-import traceback, time
+import time
 import gevent
 from collections import namedtuple, defaultdict
 from gevent import Greenlet
 from gevent.queue import Queue
-from dumbong.core.nwabc import nwatomicbroadcast
-from speedmvba.core.smvba_e_cp import speedmvba
-from dumbomvbastar.core.dumbomvba_star import smvbastar
-
-def set_consensus_log(id: int):
-    logger = logging.getLogger("consensus-node-" + str(id))
-    logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
-    if 'log' not in os.listdir(os.getcwd()):
-        os.mkdir(os.getcwd() + '/log')
-    full_path = os.path.realpath(os.getcwd()) + '/log/' + "consensus-node-" + str(id) + ".log"
-    file_handler = logging.FileHandler(full_path)
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    return logger
+from BFTs.dumbong.core.nwabc import nwatomicbroadcast
+from BFTs.speedmvba.core.smvba_e_cp import speedmvba
+from BFTs.dumbomvbastar.core.dumbomvba_star import smvbastar
+from nodes.utils import logger
 
 
 def hash(x):
@@ -57,7 +44,7 @@ class Dumbo_NG_k_s:
         self.eSK = eSK
         self._send = send
         self._recv = recv
-        self.logger = set_consensus_log(pid)
+        self.logger = logger.get_consensus_logger(pid)
         self.K = K
         # self.transaction_buffer = defaultdict(lambda: collections.deque())
         # self.transaction_buffer = defaultdict(lambda: gevent.queue.Queue())

@@ -1,8 +1,4 @@
-from queue import Queue
-
-from gevent import monkey;
-
-monkey.patch_all(thread=False)
+from gevent import monkey; monkey.patch_all(thread=False)
 
 import hashlib, pickle
 from crypto.cryptoprimitives.ecdsa.ecdsa import ecdsa_vrfy, ecdsa_sign

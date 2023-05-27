@@ -1,18 +1,16 @@
-from gevent import time, monkey
-monkey.patch_all(thread=False)
+from gevent import time, monkey;monkey.patch_all(thread=False)
 
 from typing import Callable
 import os
-
 from BFTs.dispersedledger.core.bc_mvba import BM
 from BFTs.dispersedledger.core.recover import RECOVER
-from nodes.utils.make_random_tx import tx_generator
-from multiprocessing import Value as mpValue, Queue as mpQueue, Process
+from multiprocessing import Value as mpValue
 from nodes.utils.key_loader import load_key
+from nodes.Runnable import Runnable
+from nodes.utils.logger import bootstrap_log
 
 
-
-class DL2Node (BM):
+class DL2Node(BM, Runnable):
 
     def __init__(self, sid, id, S, Bfast, Bacs, N, f,
                  bft_from_server1: Callable, bft_to_client1: Callable,bft_from_server2: Callable, bft_to_client2: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
@@ -33,22 +31,14 @@ class DL2Node (BM):
 
         # Hotstuff.__init__(self, sid, id, max(S, 200), max(int(Bfast), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute)
 
+    @bootstrap_log
     def prepare_bootstrap(self):
-        self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
-        tx = tx_generator(250)  # Set each dummy TX to be 250 Byte
         if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
-            k = 0
-            for r in range(max(self.B * self.K, 1)):
-                suffix = hex(self.id) + hex(r) + ">"
-                BM.submit_tx(self, tx[:-len(suffix)] + suffix)
-                # print("submit to buffer: ", tx[:-len(suffix)] + suffix)
-                k += 1
-                if r % 50000 == 0:
-                    self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
+            for r in range(max(self.K, 1)):
+                self.transaction_buffer.bootstrap(self.B, 250)
+                self.logger.info(f'node id {self.id} just inserts {self.B} TXs (total: {self.transaction_buffer.size()})')
         else:
             pass
-            # TODO: submit transactions through tx_buffer
-        self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
 
     def run(self):
 
@@ -59,7 +49,6 @@ class DL2Node (BM):
         self._recv = lambda: self.bft_from_server1()
         self._send2 = lambda j, o: self.bft_to_client2((j, o))
         recv2 = lambda: self.bft_from_server2()
-
 
         self.prepare_bootstrap()
 

@@ -5,7 +5,6 @@ from typing import Callable
 import os
 from gevent import time, Greenlet
 from BFTs.rbcbdtbft.core.rbcbdt import RbcBdt
-from nodes.utils.make_random_tx import tx_generator
 from nodes.utils.key_loader import load_key
 from nodes.Runnable import Runnable
 from multiprocessing import Value as mpValue
@@ -28,17 +27,12 @@ class RbcBdtBFTNode (RbcBdt, Runnable):
 
     @bootstrap_log
     def prepare_bootstrap(self):
-        tx = tx_generator(250)  # Set each dummy TX to be 250 Byte
         if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
             for _ in range(self.K + 1):
-                for r in range(self.SLOTS_NUM):
-                    suffix = hex(self.id) + hex(r) + ">"
-                    RbcBdt.submit_tx(self, tx[:-len(suffix)] + suffix)
-                    if r % 50000 == 0:
-                        self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
+                self.transaction_buffer.bootstrap(self.SLOTS_NUM, 250)
+                self.logger.info(f'node id {self.id} just inserts {self.SLOTS_NUM} TXs (total: {self.transaction_buffer.size()})')
         else:
             pass
-            # TODO: submit transactions through tx_buffer
 
     def run(self):
 

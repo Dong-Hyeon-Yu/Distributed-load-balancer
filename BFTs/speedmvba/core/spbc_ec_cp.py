@@ -1,5 +1,4 @@
-from gevent import monkey;
-monkey.patch_all(thread=False)
+from gevent import monkey; monkey.patch_all(thread=False)
 import hashlib, pickle, gevent
 from crypto.cryptoprimitives.ecdsa.ecdsa import ecdsa_vrfy, ecdsa_sign
 

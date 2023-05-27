@@ -1,16 +1,16 @@
-from gevent import monkey; monkey.patch_all(thread=False)
+from nodes.utils.logger import bootstrap_log
+from gevent import monkey;monkey.patch_all(thread=False)
 
-import random
-from typing import  Callable
+from typing import Callable
 import os
 from gevent import time
-from speedydumbobft.core.speedydumbo_s import SpeedyDumbo
-from nodes.utils.make_random_tx import tx_generator
+from BFTs.speedydumbobft.core.speedydumbo_s import SpeedyDumbo
 from multiprocessing import Value as mpValue
 from nodes.utils.key_loader import load_key
+from nodes.Runnable import Runnable
 
 
-class SDumboBFTNode (SpeedyDumbo):
+class SDumboBFTNode (SpeedyDumbo, Runnable):
 
     def __init__(self, sid, id, B, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, debug=False, tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
@@ -23,21 +23,14 @@ class SDumboBFTNode (SpeedyDumbo):
         self.mode = mode
         SpeedyDumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute, debug=debug)
 
+    @bootstrap_log
     def prepare_bootstrap(self):
-        self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
         if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
-            tx = tx_generator(250)  # Set each dummy TX to be 250 Byte
-            k = 0
             for _ in range(self.K):
-                for r in range(self.B):
-                    SpeedyDumbo.submit_tx(self, tx.replace(">", hex(r) + ">"))
-                    k += 1
-                    if r % 50000 == 0:
-                        self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
+                self.transaction_buffer.bootstrap(self.B, 250)
+                self.logger.info(f'node id {self.id} just inserts {self.B} TXs (total: {self.transaction_buffer.size()})')
         else:
             pass
-            # TODO: submit transactions through tx_buffer
-        self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
 
     def run(self):
 
@@ -53,45 +46,3 @@ class SDumboBFTNode (SpeedyDumbo):
 
         self.run_bft()
         self.stop.value = True
-
-def main(sid, i, B, N, f, addresses, K):
-    badger = SDumboBFTNode(sid, i, B, N, f, addresses, K)
-    badger.run_bft()
-
-
-if __name__ == '__main__':
-
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--sid', metavar='sid', required=True,
-                        help='identifier of node', type=str)
-    parser.add_argument('--id', metavar='id', required=True,
-                        help='identifier of node', type=int)
-    parser.add_argument('--N', metavar='N', required=True,
-                        help='number of parties', type=int)
-    parser.add_argument('--f', metavar='f', required=True,
-                        help='number of faulties', type=int)
-    parser.add_argument('--B', metavar='B', required=True,
-                        help='size of batch', type=int)
-    parser.add_argument('--K', metavar='K', required=True,
-                        help='rounds to execute', type=int)
-    args = parser.parse_args()
-
-    # Some parameters
-    sid = args.sid
-    i = args.id
-    N = args.N
-    f = args.f
-    B = args.B
-    K = args.K
-
-    # Random generator
-    rnd = random.Random(sid)
-
-    # Nodes list
-    host = "127.0.0.1"
-    port_base = int(rnd.random() * 5 + 1) * 10000
-    addresses = [(host, port_base + 200 * i) for i in range(N)]
-    print(addresses)
-
-    main(sid, i, B, N, f, addresses, K)
