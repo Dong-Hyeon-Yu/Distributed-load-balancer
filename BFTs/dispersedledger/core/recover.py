@@ -170,7 +170,7 @@ class RECOVER(Process):
                         # if self.id == 1: print("get end time of", sid, j, "at", time.time())
                         self.re_instances[sid][j].clear()
                         if self.logger != None:
-                            tx_cnt = self.B
+                            tx_cnt = int(len(m)/250)  # Todo: count the number of tx according to the size of a tx
                             self.txcnt += tx_cnt
                             self.l_c += (et - st)
                             self.txdelay = et - self.s_time

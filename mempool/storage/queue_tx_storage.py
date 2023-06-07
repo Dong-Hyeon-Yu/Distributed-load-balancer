@@ -10,7 +10,7 @@ from nodes.utils.workload_generator import zipfian_coefficient
 
 
 def tx_generator(size=250, chars=string.ascii_uppercase + string.digits):
-    return '<Dummy TX: ' + ''.join(random.choice(chars) for _ in range(size - 10)) + '>'
+    return '<Dummy TX: ' + ''.join(random.choice(chars) for _ in range(size - 16)) + '>'
 
 
 class QueueTxStorage(BaseTxStorage):
