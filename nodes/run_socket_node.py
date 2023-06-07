@@ -93,54 +93,55 @@ if __name__ == '__main__':
                 addresses[pid] = (pub_ip, port)
         assert all([node is not None for node in addresses])
         print("hosts.config is correctly read")
-
-        client_bft_mpq = mpQueue()
-        client_from_bft = lambda: client_bft_mpq.get(timeout=0.00001)
-        bft_to_client = client_bft_mpq.put_nowait
-
-        server_bft_mpq = mpQueue()
-        bft_from_server = lambda: server_bft_mpq.get(timeout=0.00001)
-        server_to_bft = server_bft_mpq.put_nowait
-
-        client_ready = mpValue(c_bool, False)
-        server_ready = mpValue(c_bool, False)
-        net_ready = mpValue(c_bool, False)
-        stop = mpValue(c_bool, False)
-
-        if P == 'ng':
-            net_client = socket_client_ng.NetworkClient(my_address[1], my_address[0], i, addresses,
-                                                                client_from_bft, client_ready, stop)
-        else:
-            net_client = socket_client.NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop)
-        net_server = NetworkServer(my_address[1], my_address[0], i, addresses, server_to_bft, server_ready, stop)
-        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F, D, O, unbalanced_workload)
-
-        net_server.start()
-        net_client.start()
-
-        while not client_ready.value or not server_ready.value:
-            time.sleep(1)
-            print("waiting for network ready...")
-
-        with net_ready.get_lock():
-            net_ready.value = True
-        print("network ok...")
-
-
-        bft_thread = Greenlet(bft.run)
-        bft_thread.start()
-        bft_thread.join()
-        print("BFT finished. Terminating net servers...")
-
-        with stop.get_lock():
-            stop.value = True
-
-        net_client.terminate()
-        net_client.join()
-        time.sleep(1)
-        net_server.terminate()
-        net_server.join()
-        print("Servers terminated.")
-
     except FileNotFoundError or AssertionError as e:
         traceback.print_exc()
+
+    client_bft_mpq = mpQueue()
+    client_from_bft = lambda: client_bft_mpq.get(timeout=0.00001)
+    bft_to_client = client_bft_mpq.put_nowait
+
+    server_bft_mpq = mpQueue()
+    bft_from_server = lambda: server_bft_mpq.get(timeout=0.00001)
+    server_to_bft = server_bft_mpq.put_nowait
+
+    client_ready = mpValue(c_bool, False)
+    server_ready = mpValue(c_bool, False)
+    net_ready = mpValue(c_bool, False)
+    stop = mpValue(c_bool, False)
+
+    if P == 'ng':
+        net_client = socket_client_ng.NetworkClient(my_address[1], my_address[0], i, addresses,
+                                                            client_from_bft, client_ready, stop)
+    else:
+        net_client = socket_client.NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop)
+    net_server = NetworkServer(my_address[1], my_address[0], i, addresses, server_to_bft, server_ready, stop)
+    bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F, D, O, unbalanced_workload)
+
+    net_server.start()
+    net_client.start()
+
+    while not client_ready.value or not server_ready.value:
+        time.sleep(1)
+        print("waiting for network ready...")
+
+    with net_ready.get_lock():
+        net_ready.value = True
+    print("network ok...")
+
+
+    bft_thread = Greenlet(bft.run)
+    bft_thread.start()
+    bft_thread.join()
+    print("BFT finished. Terminating net servers...")
+
+    with stop.get_lock():
+        stop.value = True
+
+    net_client.terminate()
+    net_client.join()
+    time.sleep(1)
+    net_server.terminate()
+    net_server.join()
+    print("Servers terminated.")
+
+
