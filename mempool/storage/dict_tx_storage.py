@@ -67,16 +67,6 @@ class DictTxStorage(BaseTxStorage):
         for tx in block:
             self.remove_by_id(tx.hash)
 
-    def remove_committed_tx_from_raw_block(self, raw_block: List) -> List:
-        block = self._decode_block(raw_block)
-        self.remove_committed_tx(block)
-        return block
+    def decode_block(self, raw_block):
 
-    def _decode_block(self, raw_block):
-        block = set()
-        for batch in raw_block:
-            decoded_batch = json.loads(batch.decode(), object_hook=lambda tx: Transaction.from_json(tx))
-            for tx in decoded_batch:
-                block.add(tx)
-
-        return list(block)
+        return [tx for batch in raw_block for tx in json.loads(batch.decode(), object_hook=lambda _tx: Transaction.from_json(_tx))]

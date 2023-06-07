@@ -1,3 +1,4 @@
+from mempool.mempool_client import MempoolClient
 from gevent import monkey;monkey.patch_all(thread=False)
 
 import jsons
@@ -77,7 +78,7 @@ class Dumbo():
     :param K: a test parameter to specify break out after K rounds
     """
 
-    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, mute=False, debug=False):
+    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, tx_storage: MempoolClient, K=3, mute=False, debug=False):
         self.sid = sid
         self.id = pid
         self.B = B
@@ -95,7 +96,7 @@ class Dumbo():
         self._recv = recv
         self.logger = logger.get_consensus_logger(pid)
         self.round = 0  # Current block number
-        self.transaction_buffer: BaseTxStorage = QueueTxStorage()
+        self.transaction_buffer: MempoolClient = tx_storage
         self._per_round_recv = {}  # Buffer of incoming messages
 
         self.K = K
@@ -344,8 +345,6 @@ class Dumbo():
 
         bc_recv_loop_thread.kill()
 
-        block = self.transaction_buffer.remove_committed_tx_from_raw_block(_output)
-
-        return block
+        return self.transaction_buffer.remove_committed_tx_from_raw_block(_output)
 
     # TODO： make help and callhelp threads to handle the rare cases when vacs (vaba) returns None
