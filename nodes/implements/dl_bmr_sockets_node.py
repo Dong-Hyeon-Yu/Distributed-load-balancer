@@ -1,3 +1,4 @@
+from mempool.mempool_client import MempoolClient
 from gevent import time, monkey;monkey.patch_all(thread=False)
 
 from typing import Callable
@@ -13,8 +14,8 @@ from nodes.utils.logger import bootstrap_log
 class DL2Node(BM, Runnable):
 
     def __init__(self, sid, id, S, Bfast, Bacs, N, f, bft_from_server1: Callable, bft_to_client1: Callable,
-                 bft_from_server2: Callable, bft_to_client2: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug',
-                 mute=False, unbalanced_workload=False, tx_buffer=None):
+                 bft_from_server2: Callable, bft_to_client2: Callable, ready: mpValue, stop: mpValue, tx_storage: MempoolClient,
+                 K=3, mode='debug', mute=False, unbalanced_workload=False):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
         self.bft_to_client1 = bft_to_client1
         self.bft_from_server1 = bft_from_server1
@@ -27,8 +28,9 @@ class DL2Node(BM, Runnable):
 
         Runnable.__init__(self, id=id, N=N, send=lambda j, o: self.bft_to_client1((j, o)), recv=lambda: self.bft_from_server1())
         BM.__init__(self, sid, id, max(int(Bfast), 1), N, f,
-                       self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
-                       send1=None, send2=None, recv=None, K=K, mute=mute)
+                    self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
+                    lambda j, o: self.bft_to_client1((j, o)), lambda j, o: self.bft_to_client2((j, o)), lambda: self.bft_from_server1(),
+                    tx_storage, K=K, mute=mute)
 
     @bootstrap_log
     def prepare_bootstrap(self):
@@ -43,9 +45,6 @@ class DL2Node(BM, Runnable):
         pid = os.getpid()
         self.logger.info('node %d\'s starts to run consensus on process id %d' % (self.id, pid))
 
-        self.send1 = lambda j, o: self.bft_to_client1((j, o))
-        self.recv = lambda: self.bft_from_server1()
-        self.send2 = lambda j, o: self.bft_to_client2((j, o))
         recv2 = lambda: self.bft_from_server2()
 
         self.synchronize_bootstrap_among_nodes()

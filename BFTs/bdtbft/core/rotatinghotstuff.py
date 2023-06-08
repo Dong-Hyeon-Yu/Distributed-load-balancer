@@ -1,4 +1,8 @@
-from gevent import monkey; monkey.patch_all(thread=False)
+from gevent import monkey;
+
+from mempool.mempool_client import MempoolClient
+
+monkey.patch_all(thread=False)
 
 import hashlib
 import json
@@ -77,7 +81,8 @@ class RotatingLeaderHotstuff():
     :param K: a test parameter to specify break out after K epochs
     """
 
-    def __init__(self, sid, pid, S, T, Bfast, Bacs, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, mute=False, omitfast=False):
+    def __init__(self, sid, pid, S, T, Bfast, Bacs, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv,
+                 tx_storage: MempoolClient, K=3, mute=False, omitfast=False):
 
         self.SLOTS_NUM = S
         self.TIMEOUT = T
@@ -100,7 +105,7 @@ class RotatingLeaderHotstuff():
         self.recv = recv
         self.logger = logger.get_consensus_logger(pid)
         self.epoch = 0  # Current block number
-        self.transaction_buffer: BaseTxStorage = QueueTxStorage()
+        self.transaction_buffer: MempoolClient = tx_storage
         self._per_epoch_recv = {}  # Buffer of incoming messages
 
         self.K = K
@@ -270,7 +275,7 @@ class RotatingLeaderHotstuff():
                 fast_blocks.put(o)
 
             fast_thread = gevent.spawn(hsfastpath, epoch_id, pid, N, f, leader,
-                                   self.transaction_buffer.fetch_tx, fastpath_output,
+                                   self.transaction_buffer.fetch_tx_batch, fastpath_output,
                                    self.SLOTS_NUM, self.FAST_BATCH_SIZE, T,
                                    hash_genesis, self.sPK2s, self.sSK2,
                                    fast_recv.get, fastpath_send, logger=self.logger, omitfast=self.omitfast)

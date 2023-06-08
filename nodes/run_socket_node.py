@@ -32,23 +32,23 @@ def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bf
                            debug=debug, unbalanced_workload=unbalanced_workload)
 
     elif protocol == "bdt":
-        bft = BdtBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute,
-                         omitfast=omitfast, unbalanced_workload=unbalanced_workload)
+        bft = BdtBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, tx_storage, mode=K,
+                         mute=mute, omitfast=omitfast, unbalanced_workload=unbalanced_workload)
 
     elif protocol == "rbc-bdt":
-        bft = RbcBdtBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute,
+        bft = RbcBdtBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, tx_storage, K, mute=mute,
                             omitfast=omitfast, unbalanced_workload=unbalanced_workload)
 
     elif protocol == 'sdumbo':
-        bft = SDumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug,
-                            unbalanced_workload=unbalanced_workload)
+        bft = SDumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, tx_storage, K, mute=mute,
+                            debug=debug, unbalanced_workload=unbalanced_workload)
 
     elif protocol == 'ng':
         bft = NGSNode(sid, i, S, B, F, N, f, bft_from_server, bft_to_client, ready, stop, mute=mute)
 
     elif protocol == "hotstuff":
-        bft = RotatingHotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K,
-                                      mute=mute, omitfast=omitfast, unbalanced_workload=unbalanced_workload)
+        bft = RotatingHotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, tx_storage,
+                                      K, mute=mute, omitfast=omitfast, unbalanced_workload=unbalanced_workload)
     else:
         print("no such a BFT protocol.")
     return bft

@@ -142,7 +142,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, 
                             tx_batch = 'Dummy'
                         else:
                             try:
-                                tx_batch = json.dumps([get_input()] * BATCH_SIZE)
+                                tx_batch = json.dumps(get_input(BATCH_SIZE))
                             except Exception as e:
                                 tx_batch = json.dumps(['Dummy' for _ in range(BATCH_SIZE)])
 
