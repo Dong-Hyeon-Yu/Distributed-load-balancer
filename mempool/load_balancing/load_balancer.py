@@ -3,7 +3,7 @@ from _queue import Empty
 from enum import IntEnum
 import random
 from multiprocessing import Process, Value as mpValue
-from typing import Callable
+from typing import Callable, List
 
 import gevent
 from gevent.queue import Queue
@@ -32,7 +32,6 @@ class LoadBalancer(Process):
         self.id = id
         self.client_lb_mpq = client_lb_mpq
         self.node_list = [i for i in range(N) if i != id]
-        self.timeout = 0.01
         self.sampling_size = sampling_size
         self.batch_size = batch_size
         self.threshold = batch_size * 2
@@ -43,6 +42,8 @@ class LoadBalancer(Process):
         # sockets shared with web client and server, respectively.
         self.send: Callable = self.client_lb_mpq.put_nowait
         self.recv = recv
+
+        # self.microblock_size = self.batch_size / 2
 
         #
         self.received_msg = [Queue() for _ in range(MsgTag.__len__())]
@@ -103,19 +104,16 @@ class LoadBalancer(Process):
 
                 target = None
                 _epoch = self.tx_storage.epoch  # set timer
-                self.logger.debug('set timer')
                 while target is None and self.tx_storage.epoch - _epoch < 1:
                     if not self.received_msg[MsgTag.MEMPOOL_INFO].empty():
-                        self.logger.debug('about to retrieve Mempool response from queue')
                         tag, lb_effect, candidate = self.received_msg[MsgTag.MEMPOOL_INFO].get_nowait()
                         target = candidate if lb_effect > 1 else None
 
                 if target is not None:
                     self.send((target, (MsgTag.PULL_REQ, '', self.id)))
-
                     self.recently_selected_node = None
                     _epoch = self.tx_storage.epoch  # reset timer
-                    while self.recently_selected_node is None:  # and self.tx_storage.epoch - _epoch < 2:
+                    while self.recently_selected_node is None and self.tx_storage.epoch - _epoch < 2:
                         if not self.received_msg[MsgTag.LOAD].empty():
                             tag, microblock, _target = self.received_msg[MsgTag.LOAD].get_nowait()
                             if _target == target:
@@ -128,10 +126,11 @@ class LoadBalancer(Process):
         """
             sampling nodes' ids to prove their mempool status for load-pulling
         """
-        candidates = random.sample(population=self.node_list, k=self.sampling_size)
+        candidates: List = random.sample(population=self.node_list, k=self.sampling_size)
         if self.recently_selected_node \
             and self.recently_selected_node not in candidates:
-            candidates = candidates[:self.sampling_size-1] + self.recently_selected_node
+            candidates.pop()
+            candidates.append(self.recently_selected_node)
 
         return set(candidates)
 

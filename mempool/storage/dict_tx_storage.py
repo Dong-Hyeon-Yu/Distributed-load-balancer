@@ -69,7 +69,7 @@ class DictTxStorage(BaseTxStorage):
     def remove_committed_tx(self, block: List[Transaction]):
         try:
             for tx in block:
-                del self.pending_proposals[tx.hash]
+                del self.pending_proposals[bytes(tx.hash)]
         except KeyError:
             pass
 

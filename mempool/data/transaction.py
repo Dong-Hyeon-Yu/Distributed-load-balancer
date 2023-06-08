@@ -33,4 +33,4 @@ class Transaction:
 
     @classmethod
     def from_json(cls, data):
-        return Transaction(data["data"], data["hash"])
+        return Transaction(data["data"], bytes(data["hash"]))
