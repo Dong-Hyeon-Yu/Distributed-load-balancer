@@ -8,6 +8,7 @@ import os
 import logging
 import traceback
 from multiprocessing import Value as mpValue, Process
+from mempool.load_balancing import load_balancer
 
 
 # Network node class: deal with socket communications
@@ -16,9 +17,10 @@ class NetworkServer (Process):
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'.encode('utf-8')
 
     def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, server_to_bft: Callable,
-                 server_ready: mpValue, stop: mpValue):
+                 server_ready: mpValue, stop: mpValue, server_to_lb: Callable = None):
 
         self.server_to_bft = server_to_bft
+        self.server_to_lb = server_to_lb
         self.server_ready = server_ready
         self.stop = stop
         self.ip = my_ip
@@ -48,8 +50,10 @@ class NetworkServer (Process):
                         data = tmp[0]
                         if data != '' and data:
                             (j, o) = (jid, pickle.loads(data))
-                            # assert j in range(self.N)
-                            self.server_to_bft((j, o))
+                            if isinstance(o[0], load_balancer.MsgTag):
+                                self.server_to_lb((j, o))
+                            else:
+                                self.server_to_bft((j, o))
                             # self.logger.debug('recv' + str((j, o)))
                             # print('recv' + str((j, o)))
                         else:
@@ -77,7 +81,7 @@ class NetworkServer (Process):
         return int((address[1] - 10000) / 200)
 
     def _set_server_logger(self, id: int):
-        logger = logging.getLogger("node-" + str(id))
+        logger = logging.getLogger("node-net-server-" + str(id))
         logger.setLevel(logging.DEBUG)
         # logger.setLevel(logging.INFO)
         formatter = logging.Formatter(

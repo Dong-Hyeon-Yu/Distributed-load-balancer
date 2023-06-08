@@ -1,5 +1,5 @@
 from gevent import monkey; monkey.patch_all(thread=False)
-
+import gevent
 from nodes.utils.logger import get_logger
 
 from ctypes import c_bool
@@ -18,13 +18,14 @@ class MsgType(IntEnum):
     FETCH_TX_BATCH = 2
     COMMIT_BLOCK = 3
     BOOTSTRAP = 4
+    EPOCH = 5
 
 
 class Mempool(Process):
 
     def __init__(self, id, tx_storage: BaseTxStorage, recv_from_bft: Connection, send_to_bft: Connection,
-                 mempool_ready: Value(c_bool), bft_stop: Value(c_bool), send_to_lb: Connection = None,
-                 recv_from_lb: Connection = None):
+                 mempool_ready: Value(c_bool), bft_stop: Value(c_bool), recv_from_lb: Connection = None,
+                 send_to_lb: Connection = None):
         self.id = id
         self.ready = mempool_ready
         self.tx_storage: BaseTxStorage = tx_storage
@@ -37,14 +38,19 @@ class Mempool(Process):
         super().__init__()
 
     def run(self):
-        self.logger.info(f'node {self.id} is running..')
+        import os
+        self.logger.info(f'node {self.id} is running.. on {os.getpid()}')
         print("running mempool...", flush=True)
         with self.ready.get_lock():
             self.ready.value = True
-        self._listen(self.recv_from_bft, self.send_to_bft)
+
+        gevent.joinall([
+            gevent.spawn(self._listen, self.recv_from_bft, self.send_to_bft),
+            gevent.spawn(self._listen, self.recv_from_lb, self.send_to_lb)
+        ])
 
     def _listen(self, in_conn: Connection, out_conn: Connection):
-        while not self.bft_stop.value:
+        while not self.bft_stop.value and in_conn and out_conn:
             if in_conn.poll():
                 tag, o = in_conn.recv()
                 if tag == MsgType.SIZE:
@@ -57,6 +63,9 @@ class Mempool(Process):
                     self._commit_block(out_conn, o)
                 elif tag == MsgType.BOOTSTRAP:
                     self._bootstrap_(out_conn, *o)
+                elif tag == MsgType.EPOCH:
+                    self._epoch(out_conn)
+            gevent.sleep()
 
     def _listen_bft(self):
         pass
@@ -65,7 +74,12 @@ class Mempool(Process):
         pass
 
     def _size(self, out_conn: Connection):
+        self.logger.info(f'current size: {self.tx_storage.size()}')
         out_conn.send(self.tx_storage.size())
+
+    def _epoch(self, out_conn: Connection):
+        self.logger.info(f'current epoch: {self.tx_storage.epoch}')
+        out_conn.send(self.tx_storage.epoch)
 
     def _store_tx_batch(self, tx_batch: List):
         self.tx_storage.store_tx_batch(tx_batch)

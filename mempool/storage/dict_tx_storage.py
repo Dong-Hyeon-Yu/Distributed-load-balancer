@@ -14,7 +14,9 @@ class DictTxStorage(BaseTxStorage):
     """
 
     def __init__(self):
+        super().__init__()
         self.storage: dict = dict()
+        self.pending_proposals = dict()
 
     def _bootstrap_balanced_workload(self, batch_size, tx_size) -> int:
         tx_list = [Transaction.dummy(tx_size) for _ in range(batch_size)]
@@ -31,8 +33,12 @@ class DictTxStorage(BaseTxStorage):
 
     def fetch_tx_batch(self, batch_size) -> List[Transaction]:
         tx_batch = []
+        while len(self.pending_proposals) > 0 and len(tx_batch) < batch_size:
+            tx_batch.append(self.pending_proposals.popitem()[1])
         while len(self.storage) > 0 and len(tx_batch) < batch_size:
-            tx_batch.append(self.fetch_tx())
+            tx: Transaction = self.storage.popitem()[1]
+            tx_batch.append(tx)
+            self.pending_proposals[tx.hash] = tx
         return tx_batch
 
     def fetch_tx(self) -> Transaction:
@@ -49,23 +55,25 @@ class DictTxStorage(BaseTxStorage):
             self.storage[tx.hash] = tx
 
     def find_by_id(self, _id) -> Transaction:
-        """return Transaction or None"""
-        return self.storage.get(_id)
+        raise NotImplemented()
 
     def remove_by_id(self, _id: bytes) -> None:
-        if self.storage.get(str(_id)):
-            del self.storage[_id]
+        raise NotImplemented()
 
     def remove_all_by_id(self, _ids: List[bytes]) -> None:
-        for _hash in _ids:
-            self.remove_by_id(_hash)
+        raise NotImplemented()
 
     def size(self):
-        return len(self.storage)
+        return len(self.storage) + len(self.pending_proposals)
 
     def remove_committed_tx(self, block: List[Transaction]):
-        for tx in block:
-            self.remove_by_id(tx.hash)
+        try:
+            for tx in block:
+                del self.pending_proposals[tx.hash]
+        except KeyError:
+            pass
+
+        self.epoch += 1
 
     def decode_block(self, raw_block):
 
