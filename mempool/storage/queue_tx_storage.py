@@ -16,6 +16,7 @@ def tx_generator(size=250, chars=string.ascii_uppercase + string.digits):
 class QueueTxStorage(BaseTxStorage):
 
     def __init__(self):
+        super().__init__()
         self.storage = Queue()
 
     def _bootstrap_balanced_workload(self, batch_size, tx_size=250) -> int:
@@ -49,24 +50,19 @@ class QueueTxStorage(BaseTxStorage):
         self.storage.put_nowait(tx)
 
     def find_by_id(self, _id):
-        pass
+        raise NotImplemented()
 
     def remove_by_id(self, _id):
-        pass
+        raise NotImplemented()
 
     def remove_all_by_id(self, _ids: Set):
-        pass
+        raise NotImplemented()
 
     def size(self):
         return self.storage.qsize()
 
     def remove_committed_tx(self, block: List[str]):
-        pass
-
-    def remove_committed_tx_from_raw_block(self, raw_block: List[str]) -> List[str]:
-        block = self.decode_block(raw_block)
-        self.remove_committed_tx(block)
-        return block
+        self.epoch += 1
 
     # decode raw block to strings
     def decode_block(self, raw_block):

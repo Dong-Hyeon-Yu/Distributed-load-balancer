@@ -5,6 +5,9 @@ from nodes.utils.workload_generator import zipfian_coefficient
 
 class BaseTxStorage(ABC):
 
+    def __init__(self):
+        self.epoch = 0
+
     def bootstrap(self, node_id, batch_size, epoch, the_number_of_nodes, tx_size=250, unbalanced_workload=False,
                   dist_func: Callable = zipfian_coefficient, *args) -> int:
         if unbalanced_workload:

@@ -31,15 +31,15 @@ class DumboBFTNode (Dumbo, Runnable):
         self.unbalanced_workload = unbalanced_workload
 
         Runnable.__init__(self, id=id, N=N, send=self.send, recv=self.recv)
-        Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s,
+        Dumbo.__init__(self, sid, id, B, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s,
                        self.sSK2, self.ePK, self.eSK, self.send, self.recv, tx_storage, K=K, mute=mute, debug=debug)
 
     # override Runnable
     @bootstrap_log
     def prepare_bootstrap(self):
         if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
-            n = self.transaction_buffer.bootstrap(self.id, self.B, self.K, self.N, 250, self.unbalanced_workload)
-            self.logger.info(f'node id {self.id} just inserts {n} TXs (total: {self.transaction_buffer.size()})')
+            self.transaction_buffer.bootstrap(self.id, self.B, self.K, self.N, 250, self.unbalanced_workload)
+            self.logger.info(f'node id {self.id} just inserts TXs (total: {self.transaction_buffer.size()})')
         else:
             pass
 

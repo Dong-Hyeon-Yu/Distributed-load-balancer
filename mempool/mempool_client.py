@@ -1,3 +1,4 @@
+from gevent import monkey;monkey.patch_all(thread=False)
 from multiprocessing.connection import Connection
 from typing import List, Callable
 
@@ -16,13 +17,13 @@ class MempoolClient:
         self.out_conn.send(
             (MsgType.BOOTSTRAP,
              (node_id, batch_size, epoch, the_number_of_nodes, tx_size, unbalanced_workload, dist_func, args)))
-        while not self.in_conn.poll():
+        while not self.in_conn.poll(1):
             pass
         assert self.in_conn.recv()  # expect True
 
     def fetch_tx_batch(self, batch_size) -> List:
         self.out_conn.send((MsgType.FETCH_TX_BATCH, batch_size))
-        while not self.in_conn.poll():
+        while not self.in_conn.poll(1):
             pass
         return self.in_conn.recv()
 
@@ -31,13 +32,20 @@ class MempoolClient:
 
     def size(self) -> int:
         self.out_conn.send((MsgType.SIZE, ''))
-        while not self.in_conn.poll():
+        while not self.in_conn.poll(1):
+            pass
+        return self.in_conn.recv()
+
+    @property
+    def epoch(self) -> int:
+        self.out_conn.send((MsgType.EPOCH, ''))
+        while not self.in_conn.poll(1):
             pass
         return self.in_conn.recv()
 
     def remove_committed_tx_from_raw_block(self, raw_block: List) -> List:
         self.out_conn.send((MsgType.COMMIT_BLOCK, raw_block))
-        while not self.in_conn.poll():
+        while not self.in_conn.poll(1):
             pass
         return self.in_conn.recv()
 
