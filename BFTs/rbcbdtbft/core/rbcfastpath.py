@@ -80,7 +80,7 @@ def rbcfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum,
                 s_times[slot_cur] = time.time()
 
                 if pid == leader:
-                    tx_batch = json.dumps([get_input()] * BATCH_SIZE)
+                    tx_batch = json.dumps(get_input(BATCH_SIZE))
                     slot_prbc_input = Queue(1)
                     slot_prbc_input.put(tx_batch)
 

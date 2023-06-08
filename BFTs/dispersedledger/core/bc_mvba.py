@@ -16,9 +16,8 @@ from gevent.event import Event
 from BFTs.honeybadgerbft.exceptions import UnknownTagError
 from BFTs.dispersedledger.core.PCBC import provablecbc
 from BFTs.speedmvba.core.smvba_e import speedmvba
+from mempool.mempool_client import MempoolClient
 from nodes.utils import logger
-from mempool.storage.base_tx_storage import BaseTxStorage
-from mempool.storage.queue_tx_storage import QueueTxStorage
 # v : k nwabc instances
 # using smvba
 
@@ -58,8 +57,8 @@ def broadcast_receiver_loop(recv_func, recv_queues):
 
 
 class BM:
-    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, send1, send2, recv, K=3, mute=False,
-                 debug=False):
+    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, send1, send2, recv, tx_storage: MempoolClient,
+                 K=3, mute=False, debug=False):
 
         self.sid = sid
         self.id = pid
@@ -78,7 +77,7 @@ class BM:
         self.logger = logger.get_consensus_logger(pid)
         self.K = K
         self.round = 0  # Current block number
-        self.transaction_buffer: BaseTxStorage = QueueTxStorage()
+        self.transaction_buffer: MempoolClient = tx_storage
         self.bc_instances = defaultdict(lambda: defaultdict())
         self.share_bc = multiprocessing.Queue()
 

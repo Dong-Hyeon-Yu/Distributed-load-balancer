@@ -54,14 +54,9 @@ class BaseTxStorage(ABC):
         pass
 
     @abstractmethod
-    def remove_committed_tx(self, block: List):
+    def remove_committed_tx(self, decoded_block: List):
         pass
 
     @abstractmethod
-    def remove_committed_tx_from_raw_block(self, raw_block: List) -> List:
-        """
-        Deserialize the given serialized(raw) block.
-        Then remove committed transactions from this storage,
-        and return the decoded block
-        """
+    def decode_block(self, raw_block: List) -> List:
         pass

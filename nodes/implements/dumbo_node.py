@@ -1,3 +1,4 @@
+from mempool.mempool_client import MempoolClient
 from mempool.storage.base_tx_storage import BaseTxStorage
 from mempool.storage.dict_tx_storage import DictTxStorage
 from mempool.storage.queue_tx_storage import QueueTxStorage
@@ -17,8 +18,9 @@ from ctypes import c_bool
 class DumboBFTNode (Dumbo, Runnable):
 
     def __init__(self, sid, id, B, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue,
-                 stop: mpValue, K = 3, mode='debug', mute=False, debug=False, bft_running: mpValue = mpValue(c_bool, False),
-                 unbalanced_workload=False):
+                 stop: mpValue, tx_storage: MempoolClient, K = 3, mode='debug', mute=False, debug=False,
+                 bft_running: mpValue = mpValue(c_bool, False), unbalanced_workload=False):
+
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
         self.send = lambda j, o: bft_to_client((j, o))
         self.recv = lambda: bft_from_server()
@@ -30,7 +32,7 @@ class DumboBFTNode (Dumbo, Runnable):
 
         Runnable.__init__(self, id=id, N=N, send=self.send, recv=self.recv)
         Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s,
-                       self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute, debug=debug)
+                       self.sSK2, self.ePK, self.eSK, self.send, self.recv, tx_storage, K=K, mute=mute, debug=debug)
 
     # override Runnable
     @bootstrap_log

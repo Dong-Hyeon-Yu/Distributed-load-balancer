@@ -2,6 +2,7 @@ from typing import Callable
 import os
 
 from BFTs.bdtbft.core.bdt import Bdt
+from mempool.mempool_client import MempoolClient
 from nodes.utils.logger import bootstrap_log
 from nodes.utils.key_loader import load_key
 from nodes.Runnable import Runnable
@@ -12,7 +13,7 @@ from ctypes import c_bool
 class BdtBFTNode (Bdt, Runnable):
 
     def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, bft_from_server: Callable, bft_to_client: Callable,
-                 net_ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, bft_running: mpValue=mpValue(c_bool, False),
+                 net_ready: mpValue, stop: mpValue, tx_storage: MempoolClient, K=3, mode='debug', mute=False, bft_running: mpValue=mpValue(c_bool, False),
                  omitfast=False, unbalanced_workload=False):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
         self.send = lambda j, o: bft_to_client((j, o))
@@ -25,14 +26,14 @@ class BdtBFTNode (Bdt, Runnable):
 
         Runnable.__init__(self, id=id, N=N, send=self.send, recv=self.recv)
         Bdt.__init__(self, sid, id, S, T, max(int(Bfast), 1), max(int(Bacs/N), 1), N, f, self.sPK, self.sSK, self.sPK1,
-                     self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=self.send, recv=self.recv, K=K,
+                     self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, tx_storage, K=K,
                      mute=mute, omitfast=omitfast)
 
     @bootstrap_log
     def prepare_bootstrap(self):
         if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
-            n = self.transaction_buffer.bootstrap(self.id, min(self.SLOTS_NUM*self.FAST_BATCH_SIZE, self.FALLBACK_BATCH_SIZE), self.K, self.N, 250, self.unbalanced_workload)
-            self.logger.info(f'node id {self.id} just inserts {n} TXs (total: {self.transaction_buffer.size()})')
+            self.transaction_buffer.bootstrap(self.id, min(self.SLOTS_NUM*self.FAST_BATCH_SIZE, self.FALLBACK_BATCH_SIZE), self.K, self.N, 250, self.unbalanced_workload)
+            self.logger.info(f'node id {self.id} just inserts TXs (total: {self.transaction_buffer.size()})')
         else:
             pass
 

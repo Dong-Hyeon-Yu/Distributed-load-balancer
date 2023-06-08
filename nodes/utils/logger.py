@@ -3,13 +3,17 @@ import os
 
 
 def get_consensus_logger(id: int):
-    logger = logging.getLogger("consensus-node-"+str(id))
+    return get_logger(id, "consensus-node-")
+
+
+def get_logger(id: int, name: str):
+    logger = logging.getLogger(name+str(id))
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter(
         '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
     if 'log' not in os.listdir(os.getcwd()):
         os.mkdir(os.getcwd() + '/log')
-    full_path = os.path.realpath(os.getcwd()) + '/log/' + "consensus-node-"+str(id) + ".log"
+    full_path = os.path.realpath(os.getcwd()) + '/log/' + name+str(id) + ".log"
     file_handler = logging.FileHandler(full_path)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)

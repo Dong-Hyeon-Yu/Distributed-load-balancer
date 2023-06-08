@@ -1,3 +1,4 @@
+from mempool.mempool_client import MempoolClient
 from gevent import monkey;monkey.patch_all(thread=False)
 
 import json
@@ -76,7 +77,8 @@ class SpeedyDumbo():
     :param K: a test parameter to specify break out after K rounds
     """
 
-    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, mute=False, debug=False):
+    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK,
+                 send, recv, tx_storage: MempoolClient, K=3, mute=False, debug=False):
         self.sid = sid
         self.id = pid
         self.B = B
@@ -94,7 +96,7 @@ class SpeedyDumbo():
         self._recv = recv
         self.logger = logger.get_consensus_logger(pid)
         self.round = 0  # Current block number
-        self.transaction_buffer: BaseTxStorage = QueueTxStorage()
+        self.transaction_buffer: MempoolClient = tx_storage
         self._per_round_recv = {}  # Buffer of incoming messages
 
         self.K = K

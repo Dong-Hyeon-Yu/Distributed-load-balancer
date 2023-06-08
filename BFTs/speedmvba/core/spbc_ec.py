@@ -134,7 +134,7 @@ def strongprovablebroadcast(sid, pid, N, f, PK2s, SK2, leader, input, output, re
                 # continue
             # print("CBC finished for leader", leader)
             digest2 = hash(str((sid, m, "FINAL")))
-            send(leader, ('SPBC_FINAL', ecdsa_sign(SK2, digest2)))
+            send(leader, ('SPBC_FINAL', m, ecdsa_sign(SK2, digest2)))
             if output is not None:
                 output((sid, pid, m, sigmas))
 
@@ -146,7 +146,7 @@ def strongprovablebroadcast(sid, pid, N, f, PK2s, SK2, leader, input, output, re
                     "reject SPBC_FINAL from %d as %d is not the leader:" % (j, pid))
                 print("reject SPBC_FINAL from %d as %d is not the leader:" % (j, pid))
                 continue
-            (_, sig2) = msg
+            (_, m, sig2) = msg
             digest2 = hash(str((sid, m, "FINAL")))
             try:
                 assert ecdsa_vrfy(PK2s[j], digest2, sig2)

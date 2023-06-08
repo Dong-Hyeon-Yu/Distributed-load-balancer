@@ -64,16 +64,10 @@ class QueueTxStorage(BaseTxStorage):
         pass
 
     def remove_committed_tx_from_raw_block(self, raw_block: List[str]) -> List[str]:
-        block = self._decode_block(raw_block)
+        block = self.decode_block(raw_block)
         self.remove_committed_tx(block)
         return block
 
     # decode raw block to strings
-    def _decode_block(self, raw_block):
-        block = set()
-        for batch in raw_block:
-            decoded_batch = json.loads(batch.decode())
-            for tx in decoded_batch:
-                block.add(tx)
-
-        return list(block)
+    def decode_block(self, raw_block):
+        return [tx for batch in raw_block for tx in json.loads(batch.decode())]
