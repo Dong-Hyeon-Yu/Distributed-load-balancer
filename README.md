@@ -1,10 +1,10 @@
-Github repo for fair comparison among BFTs that solve ACS (asynchronous common subset problem).
-A distributed load balancing algorithm is implemented for a preliminary experiment. 
-In this case, "load" means the transactions waiting in each replica's mempool to be proposed for consensus.
-Balance of mempool's transactions across replicas is critial w.r.t. system performance, especially in Symmetric consensus, in which every replica performs as a leader node.
-I thought this preliminary algorithm would be helpful to increase the overall system throughput.
-However, this project stoped because of my limited resources. 
-I found this kind of algorithms called as mempool algorithms, and there are some examples, such as Narwhar, and Stratus.
+Github repo for fair comparison among BFTs that solve ACS (asynchronous common subset problem).  
+A distributed load balancing algorithm is implemented for a preliminary experiment.  
+In this case, "load" means the transactions waiting in each replica's mempool to be proposed for consensus.  
+Balance of mempool's transactions across replicas is critial w.r.t. system performance, especially in Symmetric consensus, in which every replica performs as a leader node.  
+I thought this preliminary algorithm would be helpful to increase the overall system throughput.  
+However, this project stoped because of my limited resources.  
+I found this kind of algorithms called as mempool algorithms, and there are some examples, such as Narwhar and Stratus. 
 
 ---
 Proof-of-Concept implementation for Bolt-Dumbo Transformer. 
